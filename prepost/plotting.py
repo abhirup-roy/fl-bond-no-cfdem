@@ -618,7 +618,7 @@ class FlBedPlot:
             df["a_contact_peratom"] = df.a_contact / df.n_atoms
             return df.drop(columns=["n_atoms"])
         elif calltype == "contactn":
-            df["contactn"] = df.n_contact / df.n_atoms
+            df["contactn"] = df.n_contact / df.n_atoms * 2
             return df
         else:
             raise ValueError(
