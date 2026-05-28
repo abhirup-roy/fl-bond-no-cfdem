@@ -332,11 +332,15 @@ class ModelAnalysis(FlBedPlot):
         p_over = p_1 - p_ss
 
         concat_contact = pd.concat([self.contactn_up, self.contactn_down])
-        avg_contactn = uncertainties.ufloat(concat_contact.mean(), concat_contact.std())
-
         concat_void = pd.concat([self.voidfrac_up, self.voidfrac_down])
-        avg_voidfrac = uncertainties.ufloat(concat_void.mean(), concat_void.std())
-
+        avg_contactn = uncertainties.ufloat(
+            concat_contact.mean(),
+            pd.concat([self.contactn_up_std, self.contactn_down_std]).mean(),
+        )
+        avg_voidfrac = uncertainties.ufloat(
+            concat_void.mean(),
+            pd.concat([self.voidfrac_up_std, self.voidfrac_down_std]).mean(),
+        )
         bond_no = (6 * p_over) / (
             avg_contactn**2 * (1 - avg_voidfrac) * self.diameter * self.rho_p * 9.81
         )

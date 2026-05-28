@@ -474,7 +474,7 @@ class FlBedPlot:
                         )
                     ).T
                     np.save(
-                        os.path.join(self.plots_dir, "probe0_plot_voidfrac.npy"),
+                        os.path.join(self.plots_dir, "probe0_plot_P.npy"),
                         probe0_2d,
                     )
 
@@ -586,7 +586,6 @@ class FlBedPlot:
             ) if png_name else plt.savefig(
                 self.plots_dir + f"voidfrac_time_plot_{slice_dirn}.png"
             )
-            plt.xlabel("Velocity (m/s)")
 
         elif x_var == "velocity":
             self._calc_vel(df=voidfrac_df)
@@ -693,7 +692,8 @@ class FlBedPlot:
                         )
                     ).T
                     np.save(
-                        os.path.join(self.plots_dir, "probe0_plot_P.npy"), probe0_2d
+                        os.path.join(self.plots_dir, "probe0_plot_voidfrac.npy"),
+                        probe0_2d,
                     )
 
             plt.xlabel("Velocity (m/s)")
