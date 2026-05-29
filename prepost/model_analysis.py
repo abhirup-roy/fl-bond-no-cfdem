@@ -5,19 +5,11 @@
 Calculates bond number for the simulation data using different models
 """
 
-from .plotting import FlBedPlot, _calc_fluctuation_std
+from .plotting import FlBedPlot, _calc_fluctuation_std, _calc_fluctuation_mean
 import pandas as pd
 import numpy as np
 from typing import Optional
 import uncertainties
-
-__author__ = "Abhirup Roy"
-__credits__ = ["Abhirup Roy"]
-__license__ = "MIT"
-__version__ = "0.1"
-__maintainer__ = "Abhirup Roy"
-__email__ = "axr154@bham.ac.uk"
-__status__ = "Development"
 
 
 class ModelAnalysis(FlBedPlot):
@@ -72,7 +64,7 @@ class ModelAnalysis(FlBedPlot):
 
         num_cols = pressure_df.select_dtypes(include=[np.number]).columns
         grouped_df = pressure_df.groupby(["direction", "V_z"])
-        vel_plot_df = grouped_df.mean()
+        vel_plot_df = grouped_df[num_cols].agg(_calc_fluctuation_mean)
         vel_plot_std = grouped_df[num_cols].agg(_calc_fluctuation_std)
 
         vel_up = (
@@ -138,7 +130,7 @@ class ModelAnalysis(FlBedPlot):
 
         num_cols = voidfrac_df.select_dtypes(include=[np.number]).columns
         grouped_df = voidfrac_df.groupby(["direction", "V_z"])
-        vel_plot_df = grouped_df.mean()
+        vel_plot_df = grouped_df[num_cols].agg(_calc_fluctuation_mean)
         vel_plot_std = grouped_df[num_cols].agg(_calc_fluctuation_std)
 
         vel_up = (
@@ -214,7 +206,7 @@ class ModelAnalysis(FlBedPlot):
 
         numeric_cols = contact_df.select_dtypes(include=[np.number]).columns
         grouped_df = contact_df.groupby(["direction", "V_z"])
-        contact_plot_df = grouped_df.mean()
+        contact_plot_df = grouped_df[numeric_cols].agg(_calc_fluctuation_mean)
         contact_plot_std = grouped_df[numeric_cols].agg(_calc_fluctuation_std)
 
         vel_up = (
@@ -404,8 +396,3 @@ class ModelAnalysis(FlBedPlot):
         hyst = self.hyst_model()
 
         return {"Overshoot": overshoot, "DHR": dhr, "Hysteresis": hyst}
-
-
-if __name__ == "__main__":
-    pass
-    # See model_analysis.py for usage

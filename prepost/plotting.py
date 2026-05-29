@@ -60,6 +60,27 @@ def _calc_fluctuation_std(s: pd.Series) -> float:
     return float(np.std(s_clean))
 
 
+def _calc_fluctuation_mean(s: pd.Series) -> float:
+    """Calculate the timeseries mean based on the last 25% of peaks and troughs."""
+    s_clean = pd.to_numeric(s, errors="coerce").dropna().to_numpy()
+    if len(s_clean) < 3:
+        return float(np.mean(s_clean)) if len(s_clean) > 0 else 0.0
+
+    peaks, _ = find_peaks(s_clean)
+    troughs, _ = find_peaks(-s_clean)
+
+    if len(peaks) > 0 and len(troughs) > 0:
+        n_peaks = max(1, len(peaks) // 4)
+        n_troughs = max(1, len(troughs) // 4)
+
+        last_peaks = s_clean[peaks[-n_peaks:]]
+        last_troughs = s_clean[troughs[-n_troughs:]]
+
+        extrema = np.concatenate((last_peaks, last_troughs))
+        return float(np.mean(extrema))
+    return float(np.mean(s_clean))
+
+
 __author__ = "Abhirup Roy"
 __credits__ = ["Abhirup Roy"]
 __license__ = "MIT"
