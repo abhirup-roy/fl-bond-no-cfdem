@@ -19,6 +19,14 @@ probe_cfdem_slices = FlBedPlot(
     pressure_path=pressure_path, nprobes=5, velcfg_path=velcfg_path, dump2csv=False
 )
 
+probe_cfdem_slices.plot_voidfrac(
+    slice_dirn="y", x_var="time", png_name="voidfrac_time_plot_y", dump_probe0=True
+)
+
+probe_cfdem_slices.plot_pressure(
+    slice_dirn="z", x_var="time", png_name="pressure_time_plot_z", use_slices=True
+)
+
 probe_cfdem_slices.plot_pressure(
     slice_dirn="z",
     x_var="velocity",
@@ -31,12 +39,5 @@ probe_cfdem_slices.plot_voidfrac(
     slice_dirn="y", x_var="velocity", png_name="voidfrac_vel_plot_y", dump_probe0=True
 )
 
-probe_cfdem_slices.plot_voidfrac(
-    slice_dirn="y", x_var="time", png_name="voidfrac_time_plot_y", dump_probe0=True
-)
-
-probe_cfdem_slices.plot_pressure(
-    slice_dirn="z", x_var="time", png_name="pressure_time_plot_z", use_slices=True
-)
 
 # probe_cfdem_slices.plot_contactarea()
