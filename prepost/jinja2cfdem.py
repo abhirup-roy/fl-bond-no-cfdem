@@ -80,9 +80,9 @@ class LIGGGHTSTemplatePopulator:
             else:
                 cg_factor = kwargs.get("cg_factor", 1)
             # Apply the coarse-graining factor [Model B from Che et al. (2023)]
-            self.R *= cg_factor
-            self.density *= 1 / cg_factor
-            self.bed_mass *= cg_factor**3
+            self.R = round(self.R * cg_factor, 6)
+            self.density = round(self.density / cg_factor, 2)
+            self.bed_mass = round(self.bed_mass / cg_factor, 6)
 
     def _dump_params(
         self, params: dict | list, target_dir: str, save_as: str, filename: str
