@@ -13,7 +13,6 @@ import pandas as pd
 import pyvista as pv
 from warnings import warn
 from typing import Optional
-from dataclasses import dataclass
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 from scipy.signal import find_peaks
