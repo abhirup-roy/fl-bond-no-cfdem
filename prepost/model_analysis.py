@@ -285,7 +285,6 @@ class ModelAnalysis(FlBedPlot):
         self,
         diameter: float,
         rho_p: float,
-        bed_mass: float,
         cg_factor: Optional[float] = None,
     ):
         """
@@ -296,8 +295,6 @@ class ModelAnalysis(FlBedPlot):
             Diameter of the particles (in m)
           rho_p:
             Density of the particles (in kg/m^3)
-          bed_mass:
-            Mass of the bed (in kg)
           cg_factor:
             Coarse-graining factor. If not provided, no coarse-graining is applied.
         """

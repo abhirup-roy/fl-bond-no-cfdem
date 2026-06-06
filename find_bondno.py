@@ -20,7 +20,7 @@ if __name__ == "__main__":
         plots_dir="plots/",
     )
 
-    model.define_params(diameter=150e-6, rho_p=2700, bed_mass=0.0058, cg_factor=2.44)
+    model.define_params(diameter=150e-6, rho_p=2700, cg_factor=2.44)
 
     summary = model.model_summary()
     print(summary)
