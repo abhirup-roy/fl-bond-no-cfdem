@@ -414,7 +414,7 @@ class FlBedPlot:
 
             numeric_cols = pressure_df.select_dtypes(include=[np.number]).columns
             grouped_df = pressure_df.groupby(["direction", "V_z"])
-            vel_plot_df = grouped_df.mean()
+            vel_plot_df = grouped_df[numeric_cols].agg(_calc_fluctuation_mean)
             vel_plot_std = grouped_df[numeric_cols].agg(_calc_fluctuation_std)
 
             # Sort the data for plotting
