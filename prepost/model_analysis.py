@@ -5,22 +5,22 @@
 Calculates bond number for the simulation data using different models
 """
 
-from .plotting import FlBedPlot
+from .plotting import FlBedPlot, _calc_fluctuation_std, _calc_fluctuation_mean
 import pandas as pd
 import numpy as np
 from typing import Optional
-
-__author__ = "Abhirup Roy"
-__credits__ = ["Abhirup Roy"]
-__license__ = "MIT"
-__version__ = "0.1"
-__maintainer__ = "Abhirup Roy"
-__email__ = "axr154@bham.ac.uk"
-__status__ = "Development"
+import uncertainties
 
 
 class ModelAnalysis(FlBedPlot):
-    def __init__(self, **kwargs):
+    def __init__(
+        self,
+        pressure_path: str = "CFD/postProcessing/cuttingPlane/",
+        nprobes: int = 5,
+        velcfg_path: str = "prepost/velcfg.txt",
+        dump2csv: bool = False,
+        plots_dir: str = "plots/",
+    ):
         """
         Initialise object to calculate the bond number using different models
 
@@ -37,14 +37,6 @@ class ModelAnalysis(FlBedPlot):
             Directory to save the plots
         """
 
-        pressure_path: str = kwargs.get(
-            "pressure_path", "CFD/postProcessing/cuttingPlane/"
-        )
-        nprobes: int = kwargs.get("nprobes", 5)
-        velcfg_path: str = kwargs.get("velcfg_path", "prepost/velcfg.txt")
-        dump2csv: bool = kwargs.get("dump2csv", False)
-        plots_dir: str = kwargs.get("plots_dir", "plots/")
-
         super().__init__(
             pressure_path=pressure_path,
             nprobes=nprobes,
@@ -55,7 +47,7 @@ class ModelAnalysis(FlBedPlot):
 
         self._store_data()
 
-    def _access_pressures(self) -> tuple[pd.Series, pd.Series]:
+    def _access_pressures(self) -> tuple[pd.Series]:
         """
         Helper function to load the pressure data and divide into aerated and non-aerated regions
 
@@ -69,11 +61,24 @@ class ModelAnalysis(FlBedPlot):
         )
 
         super()._calc_vel(df=pressure_df)
-        vel_plot_df = pressure_df.groupby(["direction", "V_z"]).mean()
+
+        num_cols = pressure_df.select_dtypes(include=[np.number]).columns
+        grouped_df = pressure_df.groupby(["direction", "V_z"])
+        vel_plot_df = grouped_df[num_cols].agg(_calc_fluctuation_mean)
+        vel_plot_std = grouped_df[num_cols].agg(_calc_fluctuation_std)
 
         vel_up = (
             vel_plot_df[
                 vel_plot_df.index.get_level_values(level="direction").isin(
+                    ["up", "max"]
+                )
+            ]
+            .reset_index("direction", drop=True)
+            .sort_index()
+        )
+        vel_up_std = (
+            vel_plot_std[
+                vel_plot_std.index.get_level_values(level="direction").isin(
                     ["up", "max"]
                 )
             ]
@@ -90,16 +95,31 @@ class ModelAnalysis(FlBedPlot):
             .reset_index("direction", drop=True)
             .sort_index()
         )
+        vel_down_std = (
+            vel_plot_std[
+                vel_plot_std.index.get_level_values(level="direction").isin(
+                    ["down", "max"]
+                )
+            ]
+            .reset_index("direction", drop=True)
+            .sort_index()
+        )
 
-        return vel_up["Probe 0"], vel_down["Probe 0"]
+        return (
+            vel_up["Probe 0"],
+            vel_down["Probe 0"],
+            vel_up_std["Probe 0"],
+            vel_down_std["Probe 0"],
+        )
 
-    def _access_voidfrac(self) -> tuple[pd.Series, pd.Series]:
+    def _access_voidfrac(self) -> tuple[pd.Series, pd.Series, pd.Series, pd.Series]:
         """
         Helper function to load void fraction data and divide into
         increasing and decreasing velocity regions
 
         Returns:
-          A tuple of pd.Series of void fraction data with increasing and decreasing velocity
+          A tuple of pd.Series of void fraction data with increasing and decreasing velocity,
+          followed by their standard deviations.
         """
 
         voidfrac_df = super()._read_voidfrac(
@@ -108,7 +128,10 @@ class ModelAnalysis(FlBedPlot):
 
         super()._calc_vel(df=voidfrac_df)
 
-        vel_plot_df = voidfrac_df.groupby(["direction", "V_z"]).mean()
+        num_cols = voidfrac_df.select_dtypes(include=[np.number]).columns
+        grouped_df = voidfrac_df.groupby(["direction", "V_z"])
+        vel_plot_df = grouped_df[num_cols].agg(_calc_fluctuation_mean)
+        vel_plot_std = grouped_df[num_cols].agg(_calc_fluctuation_std)
 
         vel_up = (
             vel_plot_df[
@@ -119,10 +142,28 @@ class ModelAnalysis(FlBedPlot):
             .reset_index("direction", drop=True)
             .sort_index()
         )
+        vel_up_std = (
+            vel_plot_std[
+                vel_plot_std.index.get_level_values(level="direction").isin(
+                    ["up", "max"]
+                )
+            ]
+            .reset_index("direction", drop=True)
+            .sort_index()
+        )
 
         vel_down = (
             vel_plot_df[
                 vel_plot_df.index.get_level_values(level="direction").isin(
+                    ["down", "max"]
+                )
+            ]
+            .reset_index("direction", drop=True)
+            .sort_index()
+        )
+        vel_down_std = (
+            vel_plot_std[
+                vel_plot_std.index.get_level_values(level="direction").isin(
                     ["down", "max"]
                 )
             ]
@@ -132,6 +173,8 @@ class ModelAnalysis(FlBedPlot):
 
         squeezed_up = vel_up.squeeze()
         squeezed_down = vel_down.squeeze()
+        squeezed_up_std = vel_up_std.squeeze()
+        squeezed_down_std = vel_down_std.squeeze()
 
         # Ensure we return Series objects
         if not isinstance(squeezed_up, pd.Series):
@@ -139,11 +182,11 @@ class ModelAnalysis(FlBedPlot):
         if not isinstance(squeezed_down, pd.Series):
             raise TypeError("squeezed_down is not a pd.Series")
 
-        return squeezed_up, squeezed_down
+        return squeezed_up, squeezed_down, squeezed_up_std, squeezed_down_std
 
     def _access_contactn(
         self, contact_csv_path="DEM/post/collisions.csv"
-    ) -> tuple[pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series, pd.Series, pd.Series]:
         """
         Helper function to read the contact data and divide into increasing and decreasing
         velocity regions
@@ -153,6 +196,7 @@ class ModelAnalysis(FlBedPlot):
 
         Returns:
           A tuple of pd.Series of contact number data with increasing and decreasing velocity
+          followed by their standard deviations.
         """
         contact_df = super()._read_collisions(contact_csv_path, calltype="contactn")
         contact_df.set_index("time", inplace=True)
@@ -160,10 +204,23 @@ class ModelAnalysis(FlBedPlot):
 
         super()._calc_vel(df=contact_df)
 
-        contact_plot_df = contact_df.groupby(["direction", "V_z"]).mean()
+        numeric_cols = contact_df.select_dtypes(include=[np.number]).columns
+        grouped_df = contact_df.groupby(["direction", "V_z"])
+        contact_plot_df = grouped_df[numeric_cols].agg(_calc_fluctuation_mean)
+        contact_plot_std = grouped_df[numeric_cols].agg(_calc_fluctuation_std)
+
         vel_up = (
             contact_plot_df[
                 contact_plot_df.index.get_level_values(level="direction").isin(
+                    ["up", "max"]
+                )
+            ]
+            .reset_index("direction", drop=True)
+            .sort_index()
+        )
+        vel_up_std = (
+            contact_plot_std[
+                contact_plot_std.index.get_level_values(level="direction").isin(
                     ["up", "max"]
                 )
             ]
@@ -180,16 +237,47 @@ class ModelAnalysis(FlBedPlot):
             .reset_index("direction", drop=True)
             .sort_index()
         )
+        vel_down_std = (
+            contact_plot_std[
+                contact_plot_std.index.get_level_values(level="direction").isin(
+                    ["down", "max"]
+                )
+            ]
+            .reset_index("direction", drop=True)
+            .sort_index()
+        )
 
-        return vel_up["contactn"], vel_down["contactn"]
+        return (
+            vel_up["contactn"],
+            vel_down["contactn"],
+            vel_up_std["contactn"],
+            vel_down_std["contactn"],
+        )
 
     def _store_data(self):
         """
         Store the data in the class. Called in __init__ to prevent repeated calculations
         """
-        self.pressure_up, self.pressure_down = self._access_pressures()
-        self.contactn_up, self.contactn_down = self._access_contactn()
-        self.voidfrac_up, self.voidfrac_down = self._access_voidfrac()
+        (
+            self.pressure_up,
+            self.pressure_down,
+            self.pressure_up_std,
+            self.pressure_down_std,
+        ) = self._access_pressures()
+
+        (
+            self.contactn_up,
+            self.contactn_down,
+            self.contactn_up_std,
+            self.contactn_down_std,
+        ) = self._access_contactn()
+
+        (
+            self.voidfrac_up,
+            self.voidfrac_down,
+            self.voidfrac_up_std,
+            self.voidfrac_down_std,
+        ) = self._access_voidfrac()
 
         self.u_mf = self.pressure_up.idxmax()
 
@@ -197,7 +285,6 @@ class ModelAnalysis(FlBedPlot):
         self,
         diameter: float,
         rho_p: float,
-        bed_mass: float,
         cg_factor: Optional[float] = None,
     ):
         """
@@ -208,8 +295,6 @@ class ModelAnalysis(FlBedPlot):
             Diameter of the particles (in m)
           rho_p:
             Density of the particles (in kg/m^3)
-          bed_mass:
-            Mass of the bed (in kg)
           cg_factor:
             Coarse-graining factor. If not provided, no coarse-graining is applied.
         """
@@ -221,48 +306,83 @@ class ModelAnalysis(FlBedPlot):
             self.rho_p = rho_p
             self.diameter = diameter
 
-    def overshoot_model(self) -> float:
+    def overshoot_model(self) -> tuple[float, float]:
         """
         Calculate the Bond number overshoot model from Hsu, Huang and Kuo (2018)
+        Returns: (nominal_value, standard_deviation)
         """
-
-        if not hasattr(self, "rho_p"):
-            raise AttributeError("Define the parameters first using `define_params`")
-        elif not hasattr(self, "diameter"):
-            raise AttributeError("Define the parameters first using `define_params`")
-
-        p_1 = self.pressure_up.max()
-        p_ss = self.pressure_up.iloc[-1]
+        idx_max = self.pressure_up.idxmax()
+        p_1 = uncertainties.ufloat(
+            self.pressure_up.max(), self.pressure_up_std.loc[idx_max]
+        )
+        p_ss = uncertainties.ufloat(
+            self.pressure_up.iloc[-1], self.pressure_up_std.iloc[-1]
+        )
         p_over = p_1 - p_ss
 
-        avg_contactn = pd.concat([self.contactn_up, self.contactn_down]).mean()
-        avg_voidfrac = pd.concat([self.voidfrac_up, self.voidfrac_down]).mean()
-
-        return (6 * p_over) / (
+        concat_contact = pd.concat([self.contactn_up, self.contactn_down])
+        concat_void = pd.concat([self.voidfrac_up, self.voidfrac_down])
+        avg_contactn = uncertainties.ufloat(
+            concat_contact.mean(),
+            pd.concat([self.contactn_up_std, self.contactn_down_std]).mean(),
+        )
+        avg_voidfrac = uncertainties.ufloat(
+            concat_void.mean(),
+            pd.concat([self.voidfrac_up_std, self.voidfrac_down_std]).mean(),
+        )
+        bond_no = (6 * p_over) / (
             avg_contactn**2 * (1 - avg_voidfrac) * self.diameter * self.rho_p * 9.81
         )
+        return bond_no.nominal_value, bond_no.std_dev
 
-    def dhr_model(self) -> float:
-        """ "
-        Calculate the Bond number usin DHR model from Soleimani et al. (2021)"
+    def dhr_model(self) -> tuple[float, float]:
         """
-        voidfrac1 = self.voidfrac_up.loc[self.u_mf]
-        voidfrac2 = self.voidfrac_down.loc[self.u_mf]
+        Calculate the Bond number using DHR model from Soleimani et al. (2021)
+        Returns: (nominal_value, standard_deviation)
+        """
 
-        return (voidfrac2 / voidfrac1) ** 3 * (1 - voidfrac1) / (1 - voidfrac2) - 1
+        v1_val = self.voidfrac_up.loc[self.u_mf]
+        v1_std = self.voidfrac_up_std.loc[self.u_mf]
+        voidfrac1 = uncertainties.ufloat(v1_val, v1_std)
 
-    def hyst_model(self) -> float:
+        v2_val = self.voidfrac_down.loc[self.u_mf]
+        v2_std = self.voidfrac_down_std.loc[self.u_mf]
+        voidfrac2 = uncertainties.ufloat(v2_val, v2_std)
+
+        bond_no = (voidfrac2 / voidfrac1) ** 3 * (1 - voidfrac1) / (1 - voidfrac2) - 1
+
+        return bond_no.nominal_value, bond_no.std_dev
+
+    def hyst_model(self) -> tuple[float, float]:
         """
         Calculate the Bond number using hysteresis model from Affleck et al. (2023)
+        Returns: (nominal_value, standard_deviation)
         """
-        p_1 = self.pressure_up.max()
-        p_ss = self.pressure_up.iloc[-1]
-        p_2 = self.pressure_down.loc[self.u_mf]
 
-        delta_k = np.abs(
-            self.contactn_up.loc[self.u_mf] - self.contactn_down.loc[self.u_mf]
+        idx_max = self.pressure_up.idxmax()
+        p_1 = uncertainties.ufloat(
+            self.pressure_up.max(), self.pressure_up_std.loc[idx_max]
         )
-        return (p_1 - p_2) / (p_ss * delta_k)
+
+        p_ss = uncertainties.ufloat(
+            self.pressure_up.iloc[-1], self.pressure_up_std.iloc[-1]
+        )
+
+        p_2 = uncertainties.ufloat(
+            self.pressure_down.loc[self.u_mf], self.pressure_down_std.loc[self.u_mf]
+        )
+
+        k_up = uncertainties.ufloat(
+            self.contactn_up.loc[self.u_mf], self.contactn_up_std.loc[self.u_mf]
+        )
+        k_down = uncertainties.ufloat(
+            self.contactn_down.loc[self.u_mf], self.contactn_down_std.loc[self.u_mf]
+        )
+        delta_k = abs(k_up - k_down)
+
+        bond_no = (p_1 - p_2) / (p_ss * delta_k)
+
+        return bond_no.nominal_value, bond_no.std_dev
 
     def model_summary(self) -> dict:
         """
@@ -273,8 +393,3 @@ class ModelAnalysis(FlBedPlot):
         hyst = self.hyst_model()
 
         return {"Overshoot": overshoot, "DHR": dhr, "Hysteresis": hyst}
-
-
-if __name__ == "__main__":
-    pass
-    # See model_analysis.py for usage
