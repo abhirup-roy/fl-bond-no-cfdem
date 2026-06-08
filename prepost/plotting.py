@@ -612,8 +612,9 @@ class FlBedPlot:
             self._calc_vel(df=voidfrac_df)
 
             numeric_cols = voidfrac_df.select_dtypes(include=[np.number]).columns
-            vel_plot_df = grouped_df[numeric_cols].agg(_calc_fluctuation_mean)
-            vel_plot_df = grouped_df.mean()
+            grouped_df = voidfrac_df.groupby(["direction", "V_z"])
+
+            vel_plot_df = grouped_df[numeric_cols].agg(_calc_fluctuation_mean)
             vel_plot_std = grouped_df[numeric_cols].agg(_calc_fluctuation_std)
 
             # Sort the data for plotting
