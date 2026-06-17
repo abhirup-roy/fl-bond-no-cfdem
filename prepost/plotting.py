@@ -38,55 +38,27 @@ def find_cdfmedian(arr: np.ndarray) -> float:
     return x[median_idx].item()
 
 
-def _calc_fluctuation_std(s: pd.Series) -> float:
+def _calc_fluctuation_95ci(s: pd.Series, valid_split: float=0.5) -> float:
     """Calculate the timeseries std dev based on the last 25% of peaks and troughs."""
     s_clean = pd.to_numeric(s, errors="coerce").dropna().to_numpy()
-    if len(s_clean) < 3:
-        return float(np.std(s_clean)) if len(s_clean) > 0 else 0.0
+    if len(s_clean) <=1:
+        return float(0.0)
+    
+    valid_length = int(len(s_clean) * valid_split)
+    s_clean = s_clean[-valid_length:]
+    
+    return float(1.96 * s_clean.std())
 
-    peaks, _ = find_peaks(s_clean)
-    troughs, _ = find_peaks(-s_clean)
-
-    if len(peaks) > 0 and len(troughs) > 0:
-        n_peaks = max(1, len(peaks) // 4)
-        n_troughs = max(1, len(troughs) // 4)
-
-        last_peaks = s_clean[peaks[-n_peaks:]]
-        last_troughs = s_clean[troughs[-n_troughs:]]
-
-        extrema = np.concatenate((last_peaks, last_troughs))
-        return float(np.std(extrema))
-    return float(np.std(s_clean))
-
-
-def _calc_fluctuation_mean(s: pd.Series) -> float:
+def _calc_fluctuation_mean(s: pd.Series, valid_split: float=0.5) -> float:
     """Calculate the timeseries mean based on the last 25% of peaks and troughs."""
     s_clean = pd.to_numeric(s, errors="coerce").dropna().to_numpy()
-    if len(s_clean) < 3:
-        return float(np.mean(s_clean)) if len(s_clean) > 0 else 0.0
-
-    peaks, _ = find_peaks(s_clean)
-    troughs, _ = find_peaks(-s_clean)
-
-    if len(peaks) > 0 and len(troughs) > 0:
-        n_peaks = max(1, len(peaks) // 4)
-        n_troughs = max(1, len(troughs) // 4)
-
-        last_peaks = s_clean[peaks[-n_peaks:]]
-        last_troughs = s_clean[troughs[-n_troughs:]]
-
-        extrema = np.concatenate((last_peaks, last_troughs))
-        return float(np.mean(extrema))
-    return float(np.mean(s_clean))
-
-
-__author__ = "Abhirup Roy"
-__credits__ = ["Abhirup Roy"]
-__license__ = "MIT"
-__version__ = "0.1"
-__maintainer__ = "Abhirup Roy"
-__email__ = "axr154@bham.ac.uk"
-__status__ = "Development"
+    if len(s_clean) <=1:
+        return float(0.0)
+    
+    valid_length = int(len(s_clean) * valid_split)
+    s_clean = s_clean[-valid_length:]
+    
+    return float(s_clean.mean())
 
 
 def _parse_slice_dir(
@@ -186,7 +158,7 @@ class FlBedPlot:
         if cache_key in self._data_cache:
             return self._data_cache[cache_key].copy()
 
-        times = os.listdir(base_path)
+        times = [d for d in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, d))]
 
         parse_func = partial(
             _parse_slice_dir,
@@ -292,6 +264,8 @@ class FlBedPlot:
             self.v_z = []
 
             for line in probe_text:
+                if not line.strip():
+                    continue
                 line_splt = line.replace("(", "").replace(")", "").split()
                 self.t.append(float(line_splt[0]))
                 self.v_z.append(float(line_splt[-1]))
@@ -405,18 +379,19 @@ class FlBedPlot:
                 title=f"Pressure at {plot_suffix}",
             )
             plt.savefig(
-                self.plots_dir + png_name + ".png"
-            ) if png_name else plt.savefig(self.plots_dir + "probe_pressure.png")
+                os.path.join(self.plots_dir, f"{png_name}.png")
+            ) if png_name else plt.savefig(os.path.join(self.plots_dir, "probe_pressure.png"))
 
         elif x_var == "velocity":
             plt.figure(figsize=[20, 10])
             self._calc_vel(df=pressure_df)
 
+
             numeric_cols = pressure_df.select_dtypes(include=[np.number]).columns
             grouped_df = pressure_df.groupby(["direction", "V_z"])
             vel_plot_df = grouped_df[numeric_cols].agg(_calc_fluctuation_mean)
 
-            vel_plot_std = grouped_df[numeric_cols].agg(_calc_fluctuation_std)
+            vel_plot_std = grouped_df[numeric_cols].agg(_calc_fluctuation_95ci)
 
             # Sort the data for plotting
             vel_up = (
@@ -525,10 +500,9 @@ class FlBedPlot:
         plt.legend()
         plt.title(f"Pressure vs Velocity for {plot_suffix}")
 
-        plt.savefig(self.plots_dir + f"{png_name}.png") if png_name else plt.savefig(
-            self.plots_dir + f"pressure_vel_plot_{plot_suffix}.png"
+        plt.savefig(os.path.join(self.plots_dir, f"{png_name}.png")) if png_name else plt.savefig(
+            os.path.join(self.plots_dir, f"pressure_vel_plot_{plot_suffix}.png")
         )
-
     def _read_voidfrac(
         self, post_dir: str, slice_dirn: str, nprocs: Optional[int] = None
     ) -> pd.DataFrame:
@@ -603,18 +577,18 @@ class FlBedPlot:
                 title="Void Fraction vs Time",
             )
             plt.savefig(
-                self.plots_dir + f"{png_name}.png"
+                os.path.join(self.plots_dir, f"{png_name}.png")
             ) if png_name else plt.savefig(
-                self.plots_dir + f"voidfrac_time_plot_{slice_dirn}.png"
+                os.path.join(self.plots_dir, f"voidfrac_time_plot_{slice_dirn}.png")
             )
 
         elif x_var == "velocity":
             self._calc_vel(df=voidfrac_df)
-
+            
             numeric_cols = voidfrac_df.select_dtypes(include=[np.number]).columns
-            vel_plot_df = grouped_df[numeric_cols].agg(_calc_fluctuation_mean)
-            vel_plot_df = grouped_df.mean()
-            vel_plot_std = grouped_df[numeric_cols].agg(_calc_fluctuation_std)
+            grouped_df = voidfrac_df.groupby(["direction", "V_z"])
+            vel_plot_df = grouped_df[numeric_cols].agg(_calc_fluctuation_mean)
+            vel_plot_std = grouped_df[numeric_cols].agg(_calc_fluctuation_95ci)
 
             # Sort the data for plotting
             vel_up = (
@@ -723,8 +697,8 @@ class FlBedPlot:
         plt.legend()
         plt.title("Void Fraction vs Velocity")
 
-        plt.savefig(self.plots_dir + f"{png_name}.png") if png_name else plt.savefig(
-            self.plots_dir + f"voidfrac_vel_plot_{slice_dirn}.png"
+        plt.savefig(os.path.join(self.plots_dir, f"{png_name}.png")) if png_name else plt.savefig(
+            os.path.join(self.plots_dir, f"voidfrac_vel_plot_{slice_dirn}.png")
         )
 
     def _read_collisions(self, csv_path: str, calltype: str) -> pd.DataFrame:
@@ -783,56 +757,6 @@ class FlBedPlot:
         ax.set_ylabel(r"Contact Area per Particle ($m^2$)")
         ax.set_title("Contact Area vs Time")
         if png_name:
-            plt.savefig(self.plots_dir + f"{png_name}.png")
+            plt.savefig(os.path.join(self.plots_dir, f"{png_name}.png"))
         else:
-            plt.savefig(self.plots_dir + "contactarea_time_plot.png")
-
-
-if __name__ == "__main__":
-    # Example usage - usable as a standalone script for default paths
-
-    pressure_path = "CFD/postProcessing/cuttingPlane/"
-    velcfg_path = "velcfg.txt"
-
-    probe_cfdem_slices = FlBedPlot(
-        pressure_path=pressure_path, nprobes=5, velcfg_path=velcfg_path, dump2csv=False
-    )
-
-    """
-    Z-Normal Slices vs Time
-    """
-    # probe_cfdem_slices.plot_pressure(slice_dirn="z", x_var="time", png_name="pressure_time_plot_z", use_slices=True)
-    # probe_cfdem_slices.plot_voidfrac(slice_dirn="z", x_var="time", png_name="voidfrac_time_plot_z")
-
-    """
-    Y-Normal Slices vs Velocity
-    """
-    # probe_cfdem_slices.plot_pressure(slice_dirn="y", x_var="velocity", png_name="pressure_vel_plot_y", use_slices=True, y_agg='median')
-    # probe_cfdem_slices.plot_voidfrac(slice_dirn="y", x_var="velocity", png_name="voidfrac_vel_plot_y")
-
-    """
-    Y-Normal Slices vs Time
-    """
-    # probe_cfdem_slices.plot_pressure(slice_dirn="y", x_var="time", png_name="pressure_time_plot_y", use_slices=True, y_agg='median')
-    # probe_cfdem_slices.plot_voidfrac(slice_dirn="y", x_var="time", png_name="voidfrac_time_plot_y")
-
-    """
-    Z-normal Slices vs Velocity
-    """
-    # probe_cfdem_slices.plot_pressure(slice_dirn="z", x_var="velocity", png_name="pressure_vel_plot_z", use_slices=True)
-    # probe_cfdem_slices.plot_voidfrac(slice_dirn="z", x_var="velocity", png_name="voidfrac_vel_plot_z")
-
-    probe_cfdem_slices.plot_pressure(
-        slice_dirn="z",
-        x_var="velocity",
-        png_name="pressure_vel_plot_z",
-        use_slices=True,
-    )
-
-    probe_cfdem_slices.plot_voidfrac(
-        slice_dirn="y", x_var="velocity", png_name="voidfrac_time_plot_y"
-    )
-
-    probe_cfdem_slices.plot_pressure(
-        slice_dirn="z", x_var="time", png_name="pressure_time_plot_z", use_slices=True
-    )
+            plt.savefig(os.path.join(self.plots_dir, "contactarea_time_plot.png"))

@@ -5,11 +5,15 @@
 Calculates bond number for the simulation data using different models
 """
 
-from .plotting import FlBedPlot, _calc_fluctuation_std, _calc_fluctuation_mean
 import pandas as pd
 import numpy as np
 from typing import Optional
 import uncertainties
+from .plotting import (
+    FlBedPlot,
+    _calc_fluctuation_95ci,
+    _calc_fluctuation_mean
+)
 
 
 class ModelAnalysis(FlBedPlot):
@@ -65,7 +69,7 @@ class ModelAnalysis(FlBedPlot):
         num_cols = pressure_df.select_dtypes(include=[np.number]).columns
         grouped_df = pressure_df.groupby(["direction", "V_z"])
         vel_plot_df = grouped_df[num_cols].agg(_calc_fluctuation_mean)
-        vel_plot_std = grouped_df[num_cols].agg(_calc_fluctuation_std)
+        vel_plot_std = grouped_df[num_cols].agg(_calc_fluctuation_95ci)
 
         vel_up = (
             vel_plot_df[
@@ -131,7 +135,7 @@ class ModelAnalysis(FlBedPlot):
         num_cols = voidfrac_df.select_dtypes(include=[np.number]).columns
         grouped_df = voidfrac_df.groupby(["direction", "V_z"])
         vel_plot_df = grouped_df[num_cols].agg(_calc_fluctuation_mean)
-        vel_plot_std = grouped_df[num_cols].agg(_calc_fluctuation_std)
+        vel_plot_std = grouped_df[num_cols].agg(_calc_fluctuation_95ci)
 
         vel_up = (
             vel_plot_df[
@@ -171,18 +175,12 @@ class ModelAnalysis(FlBedPlot):
             .sort_index()
         )
 
-        squeezed_up = vel_up.squeeze()
-        squeezed_down = vel_down.squeeze()
-        squeezed_up_std = vel_up_std.squeeze()
-        squeezed_down_std = vel_down_std.squeeze()
-
-        # Ensure we return Series objects
-        if not isinstance(squeezed_up, pd.Series):
-            raise TypeError("squeezed_up is not a pd.Series")
-        if not isinstance(squeezed_down, pd.Series):
-            raise TypeError("squeezed_down is not a pd.Series")
-
-        return squeezed_up, squeezed_down, squeezed_up_std, squeezed_down_std
+        return (
+            vel_up["void_frac"],
+            vel_down["void_frac"],
+            vel_up_std["void_frac"],
+            vel_down_std["void_frac"],
+        )
 
     def _access_contactn(
         self, contact_csv_path="DEM/post/collisions.csv"
@@ -207,7 +205,7 @@ class ModelAnalysis(FlBedPlot):
         numeric_cols = contact_df.select_dtypes(include=[np.number]).columns
         grouped_df = contact_df.groupby(["direction", "V_z"])
         contact_plot_df = grouped_df[numeric_cols].agg(_calc_fluctuation_mean)
-        contact_plot_std = grouped_df[numeric_cols].agg(_calc_fluctuation_std)
+        contact_plot_std = grouped_df[numeric_cols].agg(_calc_fluctuation_95ci)
 
         vel_up = (
             contact_plot_df[

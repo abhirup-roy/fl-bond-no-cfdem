@@ -243,7 +243,8 @@ class LIGGGHTSTemplatePopulator:
                     f"ced={ced}",
                     f"density={self.density}",
                     f"bed_mass={self.bed_mass}",
-                    f"timestep={self.timestep_run}model=sJKR",
+                    f"timestep={self.timestep_run}",
+                    "model=sJKR",
                 ]
                 with open(f"{self.write_dir}/{dump_filename}.txt", "w") as f:
                     f.writelines(params)
@@ -360,7 +361,8 @@ class LIGGGHTSTemplatePopulator:
                     f"workofadhesion={workofadhesion}",
                     f"density={self.density}",
                     f"bed_mass={self.bed_mass}",
-                    f"timestep={self.timestep_run}model=JKR",
+                    f"timestep={self.timestep_run}",
+                    "model=JKR",
                 ]
                 with open(f"{self.write_dir}/{dump_filename}.txt", "w") as f:
                     f.writelines(params)

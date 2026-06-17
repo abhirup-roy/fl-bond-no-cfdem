@@ -195,9 +195,14 @@ def msq_displ(
         dump_df.set_index(["time", "id"], inplace=True)
         df_store.append(dump_df)
 
+    if direction is None:
+        direction = "z"
+    if direction not in ["x", "y", "z"]:
+        raise ValueError("direction must be one of 'x', 'y', or 'z'")
+
     msd_df = pd.concat(df_store, axis=0).sort_index()
 
-    dz = msd_df.groupby("id")["z"].diff() ** 2
+    dz = msd_df.groupby("id")[direction].diff() ** 2
     msd_by_particle = dz.groupby(level="id").sum()
 
     if dump:
