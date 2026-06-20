@@ -38,26 +38,27 @@ def find_cdfmedian(arr: np.ndarray) -> float:
     return x[median_idx].item()
 
 
-def _calc_fluctuation_95ci(s: pd.Series, valid_split: float=0.5) -> float:
+def _calc_fluctuation_95ci(s: pd.Series, valid_split: float = 0.5) -> float:
     """Calculate the timeseries std dev based on the last 25% of peaks and troughs."""
     s_clean = pd.to_numeric(s, errors="coerce").dropna().to_numpy()
-    if len(s_clean) <=1:
+    if len(s_clean) <= 1:
         return float(0.0)
-    
+
     valid_length = int(len(s_clean) * valid_split)
     s_clean = s_clean[-valid_length:]
-    
+
     return float(1.96 * s_clean.std())
 
-def _calc_fluctuation_mean(s: pd.Series, valid_split: float=0.5) -> float:
+
+def _calc_fluctuation_mean(s: pd.Series, valid_split: float = 0.5) -> float:
     """Calculate the timeseries mean based on the last 25% of peaks and troughs."""
     s_clean = pd.to_numeric(s, errors="coerce").dropna().to_numpy()
-    if len(s_clean) <=1:
+    if len(s_clean) <= 1:
         return float(0.0)
-    
+
     valid_length = int(len(s_clean) * valid_split)
     s_clean = s_clean[-valid_length:]
-    
+
     return float(s_clean.mean())
 
 
@@ -158,7 +159,11 @@ class FlBedPlot:
         if cache_key in self._data_cache:
             return self._data_cache[cache_key].copy()
 
-        times = [d for d in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, d))]
+        times = [
+            d
+            for d in os.listdir(base_path)
+            if os.path.isdir(os.path.join(base_path, d))
+        ]
 
         parse_func = partial(
             _parse_slice_dir,
@@ -380,12 +385,13 @@ class FlBedPlot:
             )
             plt.savefig(
                 os.path.join(self.plots_dir, f"{png_name}.png")
-            ) if png_name else plt.savefig(os.path.join(self.plots_dir, "probe_pressure.png"))
+            ) if png_name else plt.savefig(
+                os.path.join(self.plots_dir, "probe_pressure.png")
+            )
 
         elif x_var == "velocity":
             plt.figure(figsize=[20, 10])
             self._calc_vel(df=pressure_df)
-
 
             numeric_cols = pressure_df.select_dtypes(include=[np.number]).columns
             grouped_df = pressure_df.groupby(["direction", "V_z"])
@@ -500,9 +506,12 @@ class FlBedPlot:
         plt.legend()
         plt.title(f"Pressure vs Velocity for {plot_suffix}")
 
-        plt.savefig(os.path.join(self.plots_dir, f"{png_name}.png")) if png_name else plt.savefig(
+        plt.savefig(
+            os.path.join(self.plots_dir, f"{png_name}.png")
+        ) if png_name else plt.savefig(
             os.path.join(self.plots_dir, f"pressure_vel_plot_{plot_suffix}.png")
         )
+
     def _read_voidfrac(
         self, post_dir: str, slice_dirn: str, nprocs: Optional[int] = None
     ) -> pd.DataFrame:
@@ -584,7 +593,7 @@ class FlBedPlot:
 
         elif x_var == "velocity":
             self._calc_vel(df=voidfrac_df)
-            
+
             numeric_cols = voidfrac_df.select_dtypes(include=[np.number]).columns
             grouped_df = voidfrac_df.groupby(["direction", "V_z"])
             vel_plot_df = grouped_df[numeric_cols].agg(_calc_fluctuation_mean)
@@ -697,7 +706,9 @@ class FlBedPlot:
         plt.legend()
         plt.title("Void Fraction vs Velocity")
 
-        plt.savefig(os.path.join(self.plots_dir, f"{png_name}.png")) if png_name else plt.savefig(
+        plt.savefig(
+            os.path.join(self.plots_dir, f"{png_name}.png")
+        ) if png_name else plt.savefig(
             os.path.join(self.plots_dir, f"voidfrac_vel_plot_{slice_dirn}.png")
         )
 
@@ -724,7 +735,9 @@ class FlBedPlot:
             df["a_contact_peratom"] = df.a_contact / df.n_atoms
             return df.drop(columns=["n_atoms"])
         elif calltype == "contactn":
-            df["contactn"] = df.n_contact / df.n_atoms * 2
+            df["contactn"] = df.n_contact / df.n_atoms
+            if df["contactn"].max() < 3:
+                df["contactn"] *= 2
             return df
         else:
             raise ValueError(

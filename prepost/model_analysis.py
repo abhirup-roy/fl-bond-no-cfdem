@@ -9,11 +9,7 @@ import pandas as pd
 import numpy as np
 from typing import Optional
 import uncertainties
-from .plotting import (
-    FlBedPlot,
-    _calc_fluctuation_95ci,
-    _calc_fluctuation_mean
-)
+from .plotting import FlBedPlot, _calc_fluctuation_95ci, _calc_fluctuation_mean
 
 
 class ModelAnalysis(FlBedPlot):
