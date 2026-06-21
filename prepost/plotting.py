@@ -658,28 +658,8 @@ class FlBedPlot:
                         marker="o",
                         linestyle="dashed",
                     )
-                if dump_probe0:
-                    probe0_up_v = vel_up.index.to_numpy()
-                    probe0_up_p = vel_up[voidfrac_df.columns[0]].to_numpy()
-                    probe0_up_p_err = vel_up_std[voidfrac_df.columns[0]].to_numpy()
-                    probe0_down_v = vel_down.index.to_numpy()
-                    probe0_down_p = vel_down[voidfrac_df.columns[0]].to_numpy()
-                    probe0_down_p_err = vel_down_std[voidfrac_df.columns[0]].to_numpy()
-                    probe0_2d = np.vstack(
-                        (
-                            probe0_up_v,
-                            probe0_up_p,
-                            probe0_up_p_err,
-                            probe0_down_v,
-                            probe0_down_p,
-                            probe0_down_p_err,
-                        )
-                    ).T
-                    np.save(
-                        os.path.join(self.plots_dir, "probe0_plot_voidfrac.npy"),
-                        probe0_2d,
-                    )
             else:
+                
                 plt.errorbar(
                     vel_up.index,
                     vel_up["void_frac"],
@@ -700,6 +680,28 @@ class FlBedPlot:
                     capsize=3,
                 )
 
+            if dump_probe0:
+                probe0_up_v = vel_up.index.to_numpy()
+                probe0_up_p = vel_up[voidfrac_df.columns[0]].to_numpy()
+                probe0_up_p_err = vel_up_std[voidfrac_df.columns[0]].to_numpy()
+                probe0_down_v = vel_down.index.to_numpy()
+                probe0_down_p = vel_down[voidfrac_df.columns[0]].to_numpy()
+                probe0_down_p_err = vel_down_std[voidfrac_df.columns[0]].to_numpy()
+                probe0_2d = np.vstack(
+                    (
+                        probe0_up_v,
+                        probe0_up_p,
+                        probe0_up_p_err,
+                        probe0_down_v,
+                        probe0_down_p,
+                        probe0_down_p_err,
+                    )
+                ).T
+                np.save(
+                    os.path.join(self.plots_dir, "probe0_plot_voidfrac.npy"),
+                    probe0_2d,
+                )
+
             plt.xlabel("Velocity (m/s)")
             plt.ylabel("Void Fraction (-)")
 
@@ -711,6 +713,7 @@ class FlBedPlot:
         ) if png_name else plt.savefig(
             os.path.join(self.plots_dir, f"voidfrac_vel_plot_{slice_dirn}.png")
         )
+        
 
     def _read_collisions(self, csv_path: str, calltype: str) -> pd.DataFrame:
         """
