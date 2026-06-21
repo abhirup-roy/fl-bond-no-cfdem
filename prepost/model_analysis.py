@@ -292,13 +292,12 @@ class ModelAnalysis(FlBedPlot):
           cg_factor:
             Coarse-graining factor. If not provided, no coarse-graining is applied.
         """
+        
+        cg_factor = float(cg_factor) if cg_factor else 1.0
+        self.cg_factor = cg_factor
+        self.rho_p = rho_p / cg_factor
+        self.diameter = diameter * cg_factor
 
-        if cg_factor:
-            self.rho_p = rho_p / cg_factor
-            self.diameter = diameter * cg_factor
-        else:
-            self.rho_p = rho_p
-            self.diameter = diameter
 
     def overshoot_model(self) -> tuple[float, float]:
         """
@@ -312,7 +311,7 @@ class ModelAnalysis(FlBedPlot):
         p_ss = uncertainties.ufloat(
             self.pressure_up.iloc[-1], self.pressure_up_std.iloc[-1]
         )
-        p_over = p_1 - p_ss
+        p_over = (p_1 - p_ss) * 2
 
         concat_contact = pd.concat([self.contactn_up, self.contactn_down])
         concat_void = pd.concat([self.voidfrac_up, self.voidfrac_down])
@@ -356,15 +355,15 @@ class ModelAnalysis(FlBedPlot):
         idx_max = self.pressure_up.idxmax()
         p_1 = uncertainties.ufloat(
             self.pressure_up.max(), self.pressure_up_std.loc[idx_max]
-        )
+        ) * self.cg_factor
 
         p_ss = uncertainties.ufloat(
             self.pressure_up.iloc[-1], self.pressure_up_std.iloc[-1]
-        )
+        ) * self.cg_factor
 
         p_2 = uncertainties.ufloat(
             self.pressure_down.loc[self.u_mf], self.pressure_down_std.loc[self.u_mf]
-        )
+        ) * self.cg_factor
 
         k_up = uncertainties.ufloat(
             self.contactn_up.loc[self.u_mf], self.contactn_up_std.loc[self.u_mf]
