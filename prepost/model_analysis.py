@@ -74,7 +74,9 @@ class ModelAnalysis(FlBedPlot):
             _calc_fluctuation_mean, valid_split=self.valid_split
         )
         vel_plot_std = grouped_df[num_cols].agg(
-            _calc_fluctuation_err, valid_split=self.valid_split, error_kind=self.error_kind
+            _calc_fluctuation_err,
+            valid_split=self.valid_split,
+            error_kind=self.error_kind,
         )
 
         vel_up = (
@@ -144,7 +146,9 @@ class ModelAnalysis(FlBedPlot):
             _calc_fluctuation_mean, valid_split=self.valid_split
         )
         vel_plot_std = grouped_df[num_cols].agg(
-            _calc_fluctuation_err, valid_split=self.valid_split, error_kind=self.error_kind
+            _calc_fluctuation_err,
+            valid_split=self.valid_split,
+            error_kind=self.error_kind,
         )
 
         vel_up = (
@@ -218,7 +222,9 @@ class ModelAnalysis(FlBedPlot):
             _calc_fluctuation_mean, valid_split=self.valid_split
         )
         contact_plot_std = grouped_df[numeric_cols].agg(
-            _calc_fluctuation_err, valid_split=self.valid_split, error_kind=self.error_kind
+            _calc_fluctuation_err,
+            valid_split=self.valid_split,
+            error_kind=self.error_kind,
         )
 
         vel_up = (
@@ -328,7 +334,7 @@ class ModelAnalysis(FlBedPlot):
         p_ss = uncertainties.ufloat(
             self.pressure_up.iloc[-1], self.pressure_up_std.iloc[-1]
         )
-        p_over = (p_1 - p_ss) * 2
+        p_over = p_1 - p_ss
 
         concat_contact = pd.concat([self.contactn_up, self.contactn_down])
         concat_void = pd.concat([self.voidfrac_up, self.voidfrac_down])

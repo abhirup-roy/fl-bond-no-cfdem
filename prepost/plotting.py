@@ -38,7 +38,9 @@ def find_cdfmedian(arr: np.ndarray) -> float:
     return x[median_idx].item()
 
 
-def _calc_fluctuation_err(s: pd.Series, valid_split: float = 0.5, kind="std") -> float:
+def _calc_fluctuation_err(
+    s: pd.Series, valid_split: float = 0.5, error_kind="std"
+) -> float:
     """Calculate the timeseries std dev based on the last 25% of peaks and troughs."""
     s_clean = pd.to_numeric(s, errors="coerce").dropna().to_numpy()
     if len(s_clean) <= 1:
@@ -46,11 +48,15 @@ def _calc_fluctuation_err(s: pd.Series, valid_split: float = 0.5, kind="std") ->
 
     valid_length = int(len(s_clean) * valid_split)
     s_clean = s_clean[-valid_length:]
-    
-    if kind == "std":
+
+    if error_kind == "std":
         return float(s_clean.std())
-    elif kind == "95ci":
-        return float(1.96 * s_clean.std())
+    elif error_kind == "sem":
+        return float(s_clean.std() / np.sqrt(len(s_clean)))
+    elif error_kind == "95ci":
+        return float(1.96 * s_clean.std() / np.sqrt(len(s_clean)))
+    else:
+        raise ValueError("Invalid error kind. Choose 'std', 'sem' or '95ci'.")
 
 
 def _calc_fluctuation_mean(s: pd.Series, valid_split: float = 0.5) -> float:
@@ -408,7 +414,9 @@ class FlBedPlot:
             )
 
             vel_plot_std = grouped_df[numeric_cols].agg(
-                _calc_fluctuation_err, valid_split=self.valid_split, error_kind=self.error_kind
+                _calc_fluctuation_err,
+                valid_split=self.valid_split,
+                error_kind=self.error_kind,
             )
 
             # Sort the data for plotting
@@ -612,7 +620,9 @@ class FlBedPlot:
                 _calc_fluctuation_mean, valid_split=self.valid_split
             )
             vel_plot_std = grouped_df[numeric_cols].agg(
-                _calc_fluctuation_err, valid_split=self.valid_split, kind=self.error_kind
+                _calc_fluctuation_err,
+                valid_split=self.valid_split,
+                kind=self.error_kind,
             )
 
             # Sort the data for plotting
