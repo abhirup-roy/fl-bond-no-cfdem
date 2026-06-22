@@ -39,7 +39,7 @@ def find_cdfmedian(arr: np.ndarray) -> float:
 
 
 def _calc_fluctuation_err(
-    s: pd.Series, valid_split: float = 0.5, error_kind="std"
+    s: pd.Series, valid_split: float = 0.5, error_kind="sem"
 ) -> float:
     """Calculate the timeseries std dev based on the last 25% of peaks and troughs."""
     s_clean = pd.to_numeric(s, errors="coerce").dropna().to_numpy()

@@ -387,14 +387,12 @@ class ModelAnalysis(FlBedPlot):
             uncertainties.ufloat(
                 self.pressure_up.iloc[-1], self.pressure_up_std.iloc[-1]
             )
-            * self.cg_factor
         )
 
         p_2 = (
             uncertainties.ufloat(
                 self.pressure_down.loc[self.u_mf], self.pressure_down_std.loc[self.u_mf]
             )
-            * self.cg_factor
         )
 
         k_up = uncertainties.ufloat(
