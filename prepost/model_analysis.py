@@ -376,23 +376,16 @@ class ModelAnalysis(FlBedPlot):
         """
 
         idx_max = self.pressure_up.idxmax()
-        p_1 = (
-            uncertainties.ufloat(
-                self.pressure_up.max(), self.pressure_up_std.loc[idx_max]
-            )
-            * self.cg_factor
+        p_1 = uncertainties.ufloat(
+            self.pressure_up.max(), self.pressure_up_std.loc[idx_max]
         )
 
-        p_ss = (
-            uncertainties.ufloat(
-                self.pressure_up.iloc[-1], self.pressure_up_std.iloc[-1]
-            )
+        p_ss = uncertainties.ufloat(
+            self.pressure_up.iloc[-1], self.pressure_up_std.iloc[-1]
         )
 
-        p_2 = (
-            uncertainties.ufloat(
-                self.pressure_down.loc[self.u_mf], self.pressure_down_std.loc[self.u_mf]
-            )
+        p_2 = uncertainties.ufloat(
+            self.pressure_down.loc[self.u_mf], self.pressure_down_std.loc[self.u_mf]
         )
 
         k_up = uncertainties.ufloat(
@@ -403,7 +396,13 @@ class ModelAnalysis(FlBedPlot):
         )
         delta_k = abs(k_up - k_down)
 
-        bond_no = (p_1 - p_2) / (p_ss * delta_k)
+        try:
+            bond_no = (p_1 - p_2) / (p_ss * delta_k)
+        except ZeroDivisionError:
+            raise ZeroDivisionError(
+                "Cannot divide by zero in hysteresis model calculation."
+                f"p_ss: {p_ss}, delta_k: {delta_k}"
+            )
 
         return bond_no.nominal_value, bond_no.std_dev
 
