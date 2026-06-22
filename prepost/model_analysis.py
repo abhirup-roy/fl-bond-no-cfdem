@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 from typing import Optional
 import uncertainties
-from .plotting import FlBedPlot, _calc_fluctuation_95ci, _calc_fluctuation_mean
+from .plotting import FlBedPlot, _calc_fluctuation_err, _calc_fluctuation_mean
 
 
 class ModelAnalysis(FlBedPlot):
@@ -21,6 +21,7 @@ class ModelAnalysis(FlBedPlot):
         dump2csv: bool = False,
         plots_dir: str = "plots/",
         sample_frac: float = 0.5,
+        error_kind: str = "std",
     ):
         """
         Initialise object to calculate the bond number using different models
@@ -47,6 +48,7 @@ class ModelAnalysis(FlBedPlot):
             dump2csv=dump2csv,
             plots_dir=plots_dir,
             sample_frac=sample_frac,
+            error_kind=error_kind,
         )
 
         self._store_data()
@@ -72,7 +74,7 @@ class ModelAnalysis(FlBedPlot):
             _calc_fluctuation_mean, valid_split=self.valid_split
         )
         vel_plot_std = grouped_df[num_cols].agg(
-            _calc_fluctuation_95ci, valid_split=self.valid_split
+            _calc_fluctuation_err, valid_split=self.valid_split, error_kind=self.error_kind
         )
 
         vel_up = (
@@ -142,7 +144,7 @@ class ModelAnalysis(FlBedPlot):
             _calc_fluctuation_mean, valid_split=self.valid_split
         )
         vel_plot_std = grouped_df[num_cols].agg(
-            _calc_fluctuation_95ci, valid_split=self.valid_split
+            _calc_fluctuation_err, valid_split=self.valid_split, error_kind=self.error_kind
         )
 
         vel_up = (
@@ -216,7 +218,7 @@ class ModelAnalysis(FlBedPlot):
             _calc_fluctuation_mean, valid_split=self.valid_split
         )
         contact_plot_std = grouped_df[numeric_cols].agg(
-            _calc_fluctuation_95ci, valid_split=self.valid_split
+            _calc_fluctuation_err, valid_split=self.valid_split, error_kind=self.error_kind
         )
 
         vel_up = (
