@@ -22,6 +22,7 @@ class ModelAnalysis(FlBedPlot):
         plots_dir: str = "plots/",
         sample_frac: float = 0.5,
         error_kind: str = "std",
+        average_type: str = "mean",
     ):
         """
         Initialise object to calculate the bond number using different models
@@ -49,6 +50,7 @@ class ModelAnalysis(FlBedPlot):
             plots_dir=plots_dir,
             sample_frac=sample_frac,
             error_kind=error_kind,
+            average_type=average_type,
         )
 
         self._store_data()
@@ -71,12 +73,13 @@ class ModelAnalysis(FlBedPlot):
         num_cols = pressure_df.select_dtypes(include=[np.number]).columns
         grouped_df = pressure_df.groupby(["direction", "V_z"])
         vel_plot_df = grouped_df[num_cols].agg(
-            _calc_fluctuation_mean, valid_split=self.valid_split
+            _calc_fluctuation_mean, valid_split=self.valid_split, average_type="mean"
         )
         vel_plot_std = grouped_df[num_cols].agg(
             _calc_fluctuation_err,
             valid_split=self.valid_split,
             error_kind=self.error_kind,
+            average_type="mean",
         )
 
         vel_up = (
@@ -117,6 +120,11 @@ class ModelAnalysis(FlBedPlot):
             .sort_index()
         )
 
+        up_max = vel_up.max().max()
+        outlier_mask = (vel_down > up_max).any(axis=1)
+        vel_down = vel_down[~outlier_mask]
+        vel_down_std = vel_down_std.loc[vel_down.index]
+
         return (
             vel_up["Probe 0"],
             vel_down["Probe 0"],
@@ -143,12 +151,13 @@ class ModelAnalysis(FlBedPlot):
         num_cols = voidfrac_df.select_dtypes(include=[np.number]).columns
         grouped_df = voidfrac_df.groupby(["direction", "V_z"])
         vel_plot_df = grouped_df[num_cols].agg(
-            _calc_fluctuation_mean, valid_split=self.valid_split
+            _calc_fluctuation_mean, valid_split=self.valid_split, average_type="mean"
         )
         vel_plot_std = grouped_df[num_cols].agg(
             _calc_fluctuation_err,
             valid_split=self.valid_split,
             error_kind=self.error_kind,
+            average_type="mean",
         )
 
         vel_up = (
@@ -212,19 +221,19 @@ class ModelAnalysis(FlBedPlot):
         """
         contact_df = super()._read_collisions(contact_csv_path, calltype="contactn")
         contact_df.set_index("time", inplace=True)
-        contact_df.index -= contact_df.index.min()
 
         super()._calc_vel(df=contact_df)
 
         numeric_cols = contact_df.select_dtypes(include=[np.number]).columns
         grouped_df = contact_df.groupby(["direction", "V_z"])
         contact_plot_df = grouped_df[numeric_cols].agg(
-            _calc_fluctuation_mean, valid_split=self.valid_split
+            _calc_fluctuation_mean, valid_split=self.valid_split, average_type="mean"
         )
         contact_plot_std = grouped_df[numeric_cols].agg(
             _calc_fluctuation_err,
             valid_split=self.valid_split,
             error_kind=self.error_kind,
+            average_type="mean",
         )
 
         vel_up = (

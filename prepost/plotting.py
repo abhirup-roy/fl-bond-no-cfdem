@@ -42,7 +42,7 @@ def _calc_fluctuation_err(
     s: pd.Series,
     valid_split: float = 0.5,
     error_kind="sem",
-    average_type: str = "peaks",
+    average_type: str = "mean",
 ) -> float:
     """Calculate the timeseries std dev based on the last 25% of peaks and troughs."""
     s_clean = pd.to_numeric(s, errors="coerce").dropna().to_numpy()
@@ -62,7 +62,9 @@ def _calc_fluctuation_err(
             n_peaks = max(1, len(peaks) // 4)
             n_troughs = max(1, len(troughs) // 4)
 
-            datapoints = np.concatenate((peak_values[-n_peaks:], trough_values[-n_troughs:]))
+            datapoints = np.concatenate(
+                (peak_values[-n_peaks:], trough_values[-n_troughs:])
+            )
     else:
         valid_length = int(len(s_clean) * valid_split)
         datapoints = s_clean[-valid_length:]
@@ -78,7 +80,7 @@ def _calc_fluctuation_err(
 
 
 def _calc_fluctuation_mean(
-    s: pd.Series, valid_split: float = 0.5, average_type: str = "peaks"
+    s: pd.Series, valid_split: float = 0.5, average_type: str = "mean"
 ) -> float:
     """Calculate the timeseries mean based on the last 25% of peaks and troughs."""
     s_clean = pd.to_numeric(s, errors="coerce").dropna().to_numpy()
@@ -98,7 +100,9 @@ def _calc_fluctuation_mean(
             n_peaks = max(1, len(peaks) // 4)
             n_troughs = max(1, len(troughs) // 4)
 
-            datapoints = np.concatenate((peak_values[-n_peaks:], trough_values[-n_troughs:]))
+            datapoints = np.concatenate(
+                (peak_values[-n_peaks:], trough_values[-n_troughs:])
+            )
     else:
         valid_length = int(len(s_clean) * valid_split)
         datapoints = s_clean[-valid_length:]
@@ -152,6 +156,7 @@ class FlBedPlot:
         plots_dir: str = "plots/",
         sample_frac: Optional[float] = 0.5,
         error_kind: Optional[str] = "std",
+        average_type: Optional[str] = "peaks",
     ):
         """
         Initialise the FlBedPlot class for plotting pressure and void fraction data from fluidised bed simulations
@@ -189,6 +194,7 @@ class FlBedPlot:
         self.plots_dir = plots_dir
         self.error_kind = error_kind
         self._data_cache = {}
+        self.average_type = average_type
 
         rcParams.update({"font.size": 20})
 
@@ -445,13 +451,16 @@ class FlBedPlot:
             numeric_cols = pressure_df.select_dtypes(include=[np.number]).columns
             grouped_df = pressure_df.groupby(["direction", "V_z"])
             vel_plot_df = grouped_df[numeric_cols].agg(
-                _calc_fluctuation_mean, valid_split=self.valid_split
+                _calc_fluctuation_mean,
+                valid_split=self.valid_split,
+                average_type=self.average_type,
             )
 
             vel_plot_std = grouped_df[numeric_cols].agg(
                 _calc_fluctuation_err,
                 valid_split=self.valid_split,
                 error_kind=self.error_kind,
+                average_type=self.average_type,
             )
 
             # Sort the data for plotting
@@ -492,6 +501,11 @@ class FlBedPlot:
                 .reset_index("direction", drop=True)
                 .sort_index()
             )
+
+            up_max = vel_up.max().max()
+            outlier_mask = (vel_down > up_max).any(axis=1)
+            vel_down = vel_down[~outlier_mask]
+            vel_down_std = vel_down_std.loc[vel_down.index]
 
             if slice_dirn == "z":
                 for i in range(self.nprobes):
@@ -652,7 +666,9 @@ class FlBedPlot:
             numeric_cols = voidfrac_df.select_dtypes(include=[np.number]).columns
             grouped_df = voidfrac_df.groupby(["direction", "V_z"])
             vel_plot_df = grouped_df[numeric_cols].agg(
-                _calc_fluctuation_mean, valid_split=self.valid_split
+                _calc_fluctuation_mean,
+                valid_split=self.valid_split,
+                average_type=self.average_type,
             )
             vel_plot_std = grouped_df[numeric_cols].agg(
                 _calc_fluctuation_err,
