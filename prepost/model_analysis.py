@@ -20,6 +20,7 @@ class ModelAnalysis(FlBedPlot):
         velcfg_path: str = "prepost/velcfg.txt",
         dump2csv: bool = False,
         plots_dir: str = "plots/",
+        sample_frac: float = 0.5,
     ):
         """
         Initialise object to calculate the bond number using different models
@@ -35,6 +36,8 @@ class ModelAnalysis(FlBedPlot):
             Whether or not to save the probe data to a csv file
           plots_dir:
             Directory to save the plots
+          sample_frac:
+            Fraction of the sample to use for analysis
         """
 
         super().__init__(
@@ -43,6 +46,7 @@ class ModelAnalysis(FlBedPlot):
             velcfg_path=velcfg_path,
             dump2csv=dump2csv,
             plots_dir=plots_dir,
+            sample_frac=sample_frac,
         )
 
         self._store_data()
@@ -64,8 +68,12 @@ class ModelAnalysis(FlBedPlot):
 
         num_cols = pressure_df.select_dtypes(include=[np.number]).columns
         grouped_df = pressure_df.groupby(["direction", "V_z"])
-        vel_plot_df = grouped_df[num_cols].agg(_calc_fluctuation_mean)
-        vel_plot_std = grouped_df[num_cols].agg(_calc_fluctuation_95ci)
+        vel_plot_df = grouped_df[num_cols].agg(
+            _calc_fluctuation_mean, valid_split=self.valid_split
+        )
+        vel_plot_std = grouped_df[num_cols].agg(
+            _calc_fluctuation_95ci, valid_split=self.valid_split
+        )
 
         vel_up = (
             vel_plot_df[
@@ -130,8 +138,12 @@ class ModelAnalysis(FlBedPlot):
 
         num_cols = voidfrac_df.select_dtypes(include=[np.number]).columns
         grouped_df = voidfrac_df.groupby(["direction", "V_z"])
-        vel_plot_df = grouped_df[num_cols].agg(_calc_fluctuation_mean)
-        vel_plot_std = grouped_df[num_cols].agg(_calc_fluctuation_95ci)
+        vel_plot_df = grouped_df[num_cols].agg(
+            _calc_fluctuation_mean, valid_split=self.valid_split
+        )
+        vel_plot_std = grouped_df[num_cols].agg(
+            _calc_fluctuation_95ci, valid_split=self.valid_split
+        )
 
         vel_up = (
             vel_plot_df[
@@ -200,8 +212,12 @@ class ModelAnalysis(FlBedPlot):
 
         numeric_cols = contact_df.select_dtypes(include=[np.number]).columns
         grouped_df = contact_df.groupby(["direction", "V_z"])
-        contact_plot_df = grouped_df[numeric_cols].agg(_calc_fluctuation_mean)
-        contact_plot_std = grouped_df[numeric_cols].agg(_calc_fluctuation_95ci)
+        contact_plot_df = grouped_df[numeric_cols].agg(
+            _calc_fluctuation_mean, valid_split=self.valid_split
+        )
+        contact_plot_std = grouped_df[numeric_cols].agg(
+            _calc_fluctuation_95ci, valid_split=self.valid_split
+        )
 
         vel_up = (
             contact_plot_df[
@@ -292,12 +308,11 @@ class ModelAnalysis(FlBedPlot):
           cg_factor:
             Coarse-graining factor. If not provided, no coarse-graining is applied.
         """
-        
+
         cg_factor = float(cg_factor) if cg_factor else 1.0
         self.cg_factor = cg_factor
         self.rho_p = rho_p / cg_factor
         self.diameter = diameter * cg_factor
-
 
     def overshoot_model(self) -> tuple[float, float]:
         """
@@ -353,17 +368,26 @@ class ModelAnalysis(FlBedPlot):
         """
 
         idx_max = self.pressure_up.idxmax()
-        p_1 = uncertainties.ufloat(
-            self.pressure_up.max(), self.pressure_up_std.loc[idx_max]
-        ) * self.cg_factor
+        p_1 = (
+            uncertainties.ufloat(
+                self.pressure_up.max(), self.pressure_up_std.loc[idx_max]
+            )
+            * self.cg_factor
+        )
 
-        p_ss = uncertainties.ufloat(
-            self.pressure_up.iloc[-1], self.pressure_up_std.iloc[-1]
-        ) * self.cg_factor
+        p_ss = (
+            uncertainties.ufloat(
+                self.pressure_up.iloc[-1], self.pressure_up_std.iloc[-1]
+            )
+            * self.cg_factor
+        )
 
-        p_2 = uncertainties.ufloat(
-            self.pressure_down.loc[self.u_mf], self.pressure_down_std.loc[self.u_mf]
-        ) * self.cg_factor
+        p_2 = (
+            uncertainties.ufloat(
+                self.pressure_down.loc[self.u_mf], self.pressure_down_std.loc[self.u_mf]
+            )
+            * self.cg_factor
+        )
 
         k_up = uncertainties.ufloat(
             self.contactn_up.loc[self.u_mf], self.contactn_up_std.loc[self.u_mf]

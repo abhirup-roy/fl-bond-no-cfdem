@@ -106,6 +106,7 @@ class FlBedPlot:
         velcfg_path: str,
         dump2csv: bool = True,
         plots_dir: str = "plots/",
+        sample_frac: Optional[float] = 0.5,
     ):
         """
         Initialise the FlBedPlot class for plotting pressure and void fraction data from fluidised bed simulations
@@ -121,7 +122,8 @@ class FlBedPlot:
             Save the probe data to a csv file
           plots_dir:
             Directory to save the plots
-
+          sample_frac:
+            Fraction of the data to sample for plotting. Default is 0.5 (50% of the data).
         Raises:
           FileNotFoundError: If the pressure_path, velcfg_path or plots_dir does not exist
         """
@@ -138,6 +140,7 @@ class FlBedPlot:
         self.nprobes = nprobes
         self.dump2csv = dump2csv
         self.velcfg_path = velcfg_path
+        self.valid_split = sample_frac
         self.plots_dir = plots_dir
         self._data_cache = {}
 
@@ -395,9 +398,13 @@ class FlBedPlot:
 
             numeric_cols = pressure_df.select_dtypes(include=[np.number]).columns
             grouped_df = pressure_df.groupby(["direction", "V_z"])
-            vel_plot_df = grouped_df[numeric_cols].agg(_calc_fluctuation_mean)
+            vel_plot_df = grouped_df[numeric_cols].agg(
+                _calc_fluctuation_mean, valid_split=self.valid_split
+            )
 
-            vel_plot_std = grouped_df[numeric_cols].agg(_calc_fluctuation_95ci)
+            vel_plot_std = grouped_df[numeric_cols].agg(
+                _calc_fluctuation_95ci, valid_split=self.valid_split
+            )
 
             # Sort the data for plotting
             vel_up = (
@@ -596,8 +603,12 @@ class FlBedPlot:
 
             numeric_cols = voidfrac_df.select_dtypes(include=[np.number]).columns
             grouped_df = voidfrac_df.groupby(["direction", "V_z"])
-            vel_plot_df = grouped_df[numeric_cols].agg(_calc_fluctuation_mean)
-            vel_plot_std = grouped_df[numeric_cols].agg(_calc_fluctuation_95ci)
+            vel_plot_df = grouped_df[numeric_cols].agg(
+                _calc_fluctuation_mean, valid_split=self.valid_split
+            )
+            vel_plot_std = grouped_df[numeric_cols].agg(
+                _calc_fluctuation_95ci, valid_split=self.valid_split
+            )
 
             # Sort the data for plotting
             vel_up = (
@@ -658,8 +669,28 @@ class FlBedPlot:
                         marker="o",
                         linestyle="dashed",
                     )
+                if dump_probe0:
+                    probe0_up_v = vel_up.index.to_numpy()
+                    probe0_up_p = vel_up[voidfrac_df.columns[0]].to_numpy()
+                    probe0_up_p_err = vel_up_std[voidfrac_df.columns[0]].to_numpy()
+                    probe0_down_v = vel_down.index.to_numpy()
+                    probe0_down_p = vel_down[voidfrac_df.columns[0]].to_numpy()
+                    probe0_down_p_err = vel_down_std[voidfrac_df.columns[0]].to_numpy()
+                    probe0_2d = np.vstack(
+                        (
+                            probe0_up_v,
+                            probe0_up_p,
+                            probe0_up_p_err,
+                            probe0_down_v,
+                            probe0_down_p,
+                            probe0_down_p_err,
+                        )
+                    ).T
+                    np.save(
+                        os.path.join(self.plots_dir, "probe0_plot_voidfrac.npy"),
+                        probe0_2d,
+                    )
             else:
-                
                 plt.errorbar(
                     vel_up.index,
                     vel_up["void_frac"],
@@ -680,28 +711,6 @@ class FlBedPlot:
                     capsize=3,
                 )
 
-            if dump_probe0:
-                probe0_up_v = vel_up.index.to_numpy()
-                probe0_up_p = vel_up[voidfrac_df.columns[0]].to_numpy()
-                probe0_up_p_err = vel_up_std[voidfrac_df.columns[0]].to_numpy()
-                probe0_down_v = vel_down.index.to_numpy()
-                probe0_down_p = vel_down[voidfrac_df.columns[0]].to_numpy()
-                probe0_down_p_err = vel_down_std[voidfrac_df.columns[0]].to_numpy()
-                probe0_2d = np.vstack(
-                    (
-                        probe0_up_v,
-                        probe0_up_p,
-                        probe0_up_p_err,
-                        probe0_down_v,
-                        probe0_down_p,
-                        probe0_down_p_err,
-                    )
-                ).T
-                np.save(
-                    os.path.join(self.plots_dir, "probe0_plot_voidfrac.npy"),
-                    probe0_2d,
-                )
-
             plt.xlabel("Velocity (m/s)")
             plt.ylabel("Void Fraction (-)")
 
@@ -713,7 +722,6 @@ class FlBedPlot:
         ) if png_name else plt.savefig(
             os.path.join(self.plots_dir, f"voidfrac_vel_plot_{slice_dirn}.png")
         )
-        
 
     def _read_collisions(self, csv_path: str, calltype: str) -> pd.DataFrame:
         """
