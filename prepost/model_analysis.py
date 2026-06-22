@@ -340,8 +340,9 @@ class ModelAnalysis(FlBedPlot):
         p_1 = uncertainties.ufloat(
             self.pressure_up.max(), self.pressure_up_std.loc[idx_max]
         )
+        after_umf = self.pressure_up.index > self.u_mf
         p_ss = uncertainties.ufloat(
-            self.pressure_up.iloc[-1], self.pressure_up_std.iloc[-1]
+            self.pressure_up[after_umf].mean(), self.pressure_up_std[after_umf].mean()
         )
         p_over = p_1 - p_ss
 
@@ -389,8 +390,9 @@ class ModelAnalysis(FlBedPlot):
             self.pressure_up.max(), self.pressure_up_std.loc[idx_max]
         )
 
+        after_umf = self.pressure_up.index > self.u_mf
         p_ss = uncertainties.ufloat(
-            self.pressure_up.iloc[-1], self.pressure_up_std.iloc[-1]
+            self.pressure_up[after_umf].mean(), self.pressure_up_std[after_umf].mean()
         )
 
         p_2 = uncertainties.ufloat(
