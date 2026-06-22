@@ -39,36 +39,71 @@ def find_cdfmedian(arr: np.ndarray) -> float:
 
 
 def _calc_fluctuation_err(
-    s: pd.Series, valid_split: float = 0.5, error_kind="sem"
+    s: pd.Series,
+    valid_split: float = 0.5,
+    error_kind="sem",
+    average_type: str = "peaks",
 ) -> float:
     """Calculate the timeseries std dev based on the last 25% of peaks and troughs."""
     s_clean = pd.to_numeric(s, errors="coerce").dropna().to_numpy()
     if len(s_clean) <= 1:
         return float(0.0)
 
-    valid_length = int(len(s_clean) * valid_split)
-    s_clean = s_clean[-valid_length:]
+    if average_type == "peaks":
+        peaks, _ = find_peaks(s_clean)
+        troughs, _ = find_peaks(-s_clean)
+
+        if len(peaks) == 0 or len(troughs) == 0:
+            datapoints = s_clean[-int(len(s_clean) * valid_split) :]
+        else:
+            peak_values = s_clean[peaks]
+            trough_values = s_clean[troughs]
+
+            n_peaks = max(1, len(peaks) // 4)
+            n_troughs = max(1, len(troughs) // 4)
+
+            datapoints = np.concatenate((peak_values[-n_peaks:], trough_values[-n_troughs:]))
+    else:
+        valid_length = int(len(s_clean) * valid_split)
+        datapoints = s_clean[-valid_length:]
 
     if error_kind == "std":
-        return float(s_clean.std())
+        return float(datapoints.std())
     elif error_kind == "sem":
-        return float(s_clean.std() / np.sqrt(len(s_clean)))
+        return float(datapoints.std() / np.sqrt(len(datapoints)))
     elif error_kind == "95ci":
-        return float(1.96 * s_clean.std() / np.sqrt(len(s_clean)))
+        return float(1.96 * datapoints.std() / np.sqrt(len(datapoints)))
     else:
         raise ValueError("Invalid error kind. Choose 'std', 'sem' or '95ci'.")
 
 
-def _calc_fluctuation_mean(s: pd.Series, valid_split: float = 0.5) -> float:
+def _calc_fluctuation_mean(
+    s: pd.Series, valid_split: float = 0.5, average_type: str = "peaks"
+) -> float:
     """Calculate the timeseries mean based on the last 25% of peaks and troughs."""
     s_clean = pd.to_numeric(s, errors="coerce").dropna().to_numpy()
     if len(s_clean) <= 1:
         return float(0.0)
 
-    valid_length = int(len(s_clean) * valid_split)
-    s_clean = s_clean[-valid_length:]
+    if average_type == "peaks":
+        peaks, _ = find_peaks(s_clean)
+        troughs, _ = find_peaks(-s_clean)
 
-    return float(s_clean.mean())
+        if len(peaks) == 0 or len(troughs) == 0:
+            datapoints = s_clean[-int(len(s_clean) * valid_split) :]
+        else:
+            peak_values = s_clean[peaks]
+            trough_values = s_clean[troughs]
+
+            n_peaks = max(1, len(peaks) // 4)
+            n_troughs = max(1, len(troughs) // 4)
+
+            datapoints = np.concatenate((peak_values[-n_peaks:], trough_values[-n_troughs:]))
+    else:
+        valid_length = int(len(s_clean) * valid_split)
+        datapoints = s_clean[-valid_length:]
+
+    return float(datapoints.mean())
 
 
 def _parse_slice_dir(
