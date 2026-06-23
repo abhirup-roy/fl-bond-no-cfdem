@@ -498,7 +498,7 @@ class FlBedPlot:
 
         return self._read_slices_parallel(
             base_path=post_dir,
-            variable="void_frac",
+            variable="voidfraction",
             slice_dirn=slice_dirn,
             y_agg=y_agg,
             nprocs=nprocs,

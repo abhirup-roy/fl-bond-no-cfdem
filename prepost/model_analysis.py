@@ -9,6 +9,7 @@ from .plotting import FlBedPlot
 import pandas as pd
 import numpy as np
 from typing import Optional
+import uncertainties
 
 __author__ = "Abhirup Roy"
 __credits__ = ["Abhirup Roy"]
@@ -287,7 +288,6 @@ class ModelAnalysis(FlBedPlot):
         self,
         diameter: float,
         rho_p: float,
-        bed_mass: float,
         cg_factor: Optional[float] = None,
     ):
         """
@@ -311,7 +311,7 @@ class ModelAnalysis(FlBedPlot):
             self.rho_p = rho_p
             self.diameter = diameter
 
-    def overshoot_model(self) -> float:
+    def overshoot_model(self) -> tuple[float, float]:
         """
         Calculate the Bond number overshoot model from Hsu, Huang and Kuo (2018)
         """
@@ -321,38 +321,71 @@ class ModelAnalysis(FlBedPlot):
         elif not hasattr(self, "diameter"):
             raise AttributeError("Define the parameters first using `define_params`")
 
-        p_1 = self.pressure_up.max()
-        p_ss = self.pressure_up.iloc[-1]
-        p_over = p_1 - p_ss
-
-        avg_contactn = pd.concat([self.contactn_up, self.contactn_down]).mean()
-        avg_voidfrac = pd.concat([self.voidfrac_up, self.voidfrac_down]).mean()
-
-        return (6 * p_over) / (
-            avg_contactn**2 * (1 - avg_voidfrac) * self.diameter * self.rho_p * 9.81
+        idx_max = self.pressure_up.idxmax()
+        p_1 = uncertainties.ufloat(
+            self.pressure_up.max(), self.pressure_up_std.loc[idx_max]
         )
 
-    def dhr_model(self) -> float:
+        p_ss = uncertainties.ufloat(
+            self.pressure_up.iloc[-1], self.pressure_up_std.iloc[-1]
+        )
+        p_over = p_1 - p_ss
+
+        all_contact = pd.concat([self.contactn_up, self.contactn_down])
+        avg_contactn = uncertainties.ufloat(all_contact.mean(), all_contact.std())
+
+        all_voidfrac = pd.concat([self.voidfrac_up, self.voidfrac_down])
+        avg_voidfrac = uncertainties.ufloat(all_voidfrac.mean(), all_voidfrac.std())
+
+        bond_no = (6 * p_over) / (
+            avg_contactn**2 * (1 - avg_voidfrac) * self.diameter * self.rho_p * 9.81
+        )
+        return bond_no.nominal_value, bond_no.std_dev
+
+    def dhr_model(self) -> tuple[float, float]:
         """ "
         Calculate the Bond number usin DHR model from Soleimani et al. (2021)"
         """
-        voidfrac1 = self.voidfrac_up.loc[self.u_mf]
-        voidfrac2 = self.voidfrac_down.loc[self.u_mf]
+        vf1_val = self.voidfrac_up.loc[self.u_mf]
+        vf1_std = self.voidfrac_up_std.loc[self.u_mf]
+        voidfrac1 = uncertainties.ufloat(vf1_val, vf1_std)
 
-        return (voidfrac2 / voidfrac1) ** 3 * (1 - voidfrac1) / (1 - voidfrac2) - 1
+        vf2_val = self.voidfrac_down.loc[self.u_mf]
+        vf2_std = self.voidfrac_down_std.loc[self.u_mf]
+        voidfrac2 = uncertainties.ufloat(vf2_val, vf2_std)
 
-    def hyst_model(self) -> float:
+        bond_no = (voidfrac2 / voidfrac1) ** 3 * (1 - voidfrac1) / (1 - voidfrac2) - 1
+
+        return bond_no.nominal_value, bond_no.std_dev
+
+    def hyst_model(self) -> tuple[float, float]:
         """
         Calculate the Bond number using hysteresis model from Affleck et al. (2023)
         """
-        p_1 = self.pressure_up.max()
-        p_ss = self.pressure_up.iloc[-1]
-        p_2 = self.pressure_down.loc[self.u_mf]
-
-        delta_k = np.abs(
-            self.contactn_up.loc[self.u_mf] - self.contactn_down.loc[self.u_mf]
+        idx_max = self.pressure_up.idxmax()
+        p_1 = uncertainties.ufloat(
+            self.pressure_up.max(), self.pressure_up_std.loc[idx_max]
         )
-        return (p_1 - p_2) / (p_ss * delta_k)
+
+        p_ss = uncertainties.ufloat(
+            self.pressure_up.iloc[-1], self.pressure_up_std.iloc[-1]
+        )
+
+        p_2 = uncertainties.ufloat(
+            self.pressure_down.loc[self.u_mf], self.pressure_down_std.loc[self.u_mf]
+        )
+
+        k_up = uncertainties.ufloat(
+            self.contactn_up.loc[self.u_mf], self.contactn_up_std.loc[self.u_mf]
+        )
+        k_down = uncertainties.ufloat(
+            self.contactn_down.loc[self.u_mf], self.contactn_down_std.loc[self.u_mf]
+        )
+        delta_k = abs(k_up - k_down)
+
+        bond_no = (p_1 - p_2) / (p_ss * delta_k)
+
+        return bond_no.nominal_value, bond_no.std_dev
 
     def model_summary(self) -> dict:
         """
