@@ -70,7 +70,7 @@ class ModelAnalysis(FlBedPlot):
 
         super()._calc_vel(df=pressure_df)
         vel_plot_df = pressure_df.groupby(["direction", "V_z"]).mean()
-        vel_plot_std = pressure_df.groupby(["direction", "V_z"]).std()
+        vel_plot_err = pressure_df.groupby(["direction", "V_z"]).sem()
 
         vel_up = (
             vel_plot_df[
@@ -82,9 +82,9 @@ class ModelAnalysis(FlBedPlot):
             .sort_index()
         )
 
-        vel_up_std = (
-            vel_plot_std[
-                vel_plot_std.index.get_level_values(level="direction").isin(
+        vel_up_err = (
+            vel_plot_err[
+                vel_plot_err.index.get_level_values(level="direction").isin(
                     ["up", "max"]
                 )
             ]
@@ -102,9 +102,9 @@ class ModelAnalysis(FlBedPlot):
             .sort_index()
         )
 
-        vel_down_std = (
-            vel_plot_std[
-                vel_plot_std.index.get_level_values(level="direction").isin(
+        vel_down_err = (
+            vel_plot_err[
+                vel_plot_err.index.get_level_values(level="direction").isin(
                     ["down", "max"]
                 )
             ]
@@ -115,8 +115,8 @@ class ModelAnalysis(FlBedPlot):
         return (
             vel_up["Probe 0"],
             vel_down["Probe 0"],
-            vel_up_std["Probe 0"],
-            vel_down_std["Probe 0"],
+            vel_up_err["Probe 0"],
+            vel_down_err["Probe 0"],
         )
 
     def _access_voidfrac(self) -> tuple[pd.Series, pd.Series, pd.Series, pd.Series]:
@@ -135,7 +135,7 @@ class ModelAnalysis(FlBedPlot):
         super()._calc_vel(df=voidfrac_df)
 
         vel_plot_df = voidfrac_df.groupby(["direction", "V_z"]).mean()
-        vel_plot_std = voidfrac_df.groupby(["direction", "V_z"]).std()
+        vel_plot_err = voidfrac_df.groupby(["direction", "V_z"]).sem()
 
         vel_up = (
             vel_plot_df[
@@ -147,9 +147,9 @@ class ModelAnalysis(FlBedPlot):
             .sort_index()
         )
 
-        vel_up_std = (
-            vel_plot_std[
-                vel_plot_std.index.get_level_values(level="direction").isin(
+        vel_up_err = (
+            vel_plot_err[
+                vel_plot_err.index.get_level_values(level="direction").isin(
                     ["up", "max"]
                 )
             ]
@@ -167,9 +167,9 @@ class ModelAnalysis(FlBedPlot):
             .sort_index()
         )
 
-        vel_down_std = (
-            vel_plot_std[
-                vel_plot_std.index.get_level_values(level="direction").isin(
+        vel_down_err = (
+            vel_plot_err[
+                vel_plot_err.index.get_level_values(level="direction").isin(
                     ["down", "max"]
                 )
             ]
@@ -179,8 +179,8 @@ class ModelAnalysis(FlBedPlot):
 
         squeezed_up = vel_up.squeeze()
         squeezed_down = vel_down.squeeze()
-        squeezed_up_std = vel_up_std.squeeze()
-        squeezed_down_std = vel_down_std.squeeze()
+        squeezed_up_err = vel_up_err.squeeze()
+        squeezed_down_err = vel_down_err.squeeze()
 
         # Ensure we return Series objects
         if not isinstance(squeezed_up, pd.Series):
@@ -188,7 +188,7 @@ class ModelAnalysis(FlBedPlot):
         if not isinstance(squeezed_down, pd.Series):
             raise TypeError("squeezed_down is not a pd.Series")
 
-        return squeezed_up, squeezed_down, squeezed_up_std, squeezed_down_std
+        return squeezed_up, squeezed_down, squeezed_up_err, squeezed_down_err
 
     def _access_contactn(
         self, contact_csv_path="DEM/post/collisions.csv"
@@ -210,7 +210,7 @@ class ModelAnalysis(FlBedPlot):
         super()._calc_vel(df=contact_df)
 
         contact_plot_df = contact_df.groupby(["direction", "V_z"]).mean()
-        contact_plot_std = contact_df.groupby(["direction", "V_z"]).std()
+        contact_plot_err = contact_df.groupby(["direction", "V_z"]).sem()
 
         vel_up = (
             contact_plot_df[
@@ -222,9 +222,9 @@ class ModelAnalysis(FlBedPlot):
             .sort_index()
         )
 
-        vel_up_std = (
-            contact_plot_std[
-                contact_plot_std.index.get_level_values(level="direction").isin(
+        vel_up_err = (
+            contact_plot_err[
+                contact_plot_err.index.get_level_values(level="direction").isin(
                     ["up", "max"]
                 )
             ]
@@ -242,9 +242,9 @@ class ModelAnalysis(FlBedPlot):
             .sort_index()
         )
 
-        vel_down_std = (
-            contact_plot_std[
-                contact_plot_std.index.get_level_values(level="direction").isin(
+        vel_down_err = (
+            contact_plot_err[
+                contact_plot_err.index.get_level_values(level="direction").isin(
                     ["down", "max"]
                 )
             ]
@@ -255,8 +255,8 @@ class ModelAnalysis(FlBedPlot):
         return (
             vel_up["contactn"],
             vel_down["contactn"],
-            vel_up_std["contactn"],
-            vel_down_std["contactn"],
+            vel_up_err["contactn"],
+            vel_down_err["contactn"],
         )
 
     def _store_data(self):
@@ -266,20 +266,20 @@ class ModelAnalysis(FlBedPlot):
         (
             self.pressure_up,
             self.pressure_down,
-            self.pressure_up_std,
-            self.pressure_down_std,
+            self.pressure_up_err,
+            self.pressure_down_err,
         ) = self._access_pressures()
         (
             self.contactn_up,
             self.contactn_down,
-            self.contactn_up_std,
-            self.contactn_down_std,
+            self.contactn_up_err,
+            self.contactn_down_err,
         ) = self._access_contactn()
         (
             self.voidfrac_up,
             self.voidfrac_down,
-            self.voidfrac_up_std,
-            self.voidfrac_down_std,
+            self.voidfrac_up_err,
+            self.voidfrac_down_err,
         ) = self._access_voidfrac()
 
         self.u_mf = self.pressure_up.idxmax()
@@ -323,19 +323,19 @@ class ModelAnalysis(FlBedPlot):
 
         idx_max = self.pressure_up.idxmax()
         p_1 = uncertainties.ufloat(
-            self.pressure_up.max(), self.pressure_up_std.loc[idx_max]
+            self.pressure_up.max(), self.pressure_up_err.loc[idx_max]
         )
 
         p_ss = uncertainties.ufloat(
-            self.pressure_up.iloc[-1], self.pressure_up_std.iloc[-1]
+            self.pressure_up.iloc[-1], self.pressure_up_err.iloc[-1]
         )
         p_over = p_1 - p_ss
 
         all_contact = pd.concat([self.contactn_up, self.contactn_down])
-        avg_contactn = uncertainties.ufloat(all_contact.mean(), all_contact.std())
+        avg_contactn = uncertainties.ufloat(all_contact.mean(), all_contact.sem())
 
         all_voidfrac = pd.concat([self.voidfrac_up, self.voidfrac_down])
-        avg_voidfrac = uncertainties.ufloat(all_voidfrac.mean(), all_voidfrac.std())
+        avg_voidfrac = uncertainties.ufloat(all_voidfrac.mean(), all_voidfrac.sem())
 
         bond_no = (6 * p_over) / (
             avg_contactn**2 * (1 - avg_voidfrac) * self.diameter * self.rho_p * 9.81
@@ -347,12 +347,12 @@ class ModelAnalysis(FlBedPlot):
         Calculate the Bond number usin DHR model from Soleimani et al. (2021)"
         """
         vf1_val = self.voidfrac_up.loc[self.u_mf]
-        vf1_std = self.voidfrac_up_std.loc[self.u_mf]
-        voidfrac1 = uncertainties.ufloat(vf1_val, vf1_std)
+        vf1_err = self.voidfrac_up_err.loc[self.u_mf]
+        voidfrac1 = uncertainties.ufloat(vf1_val, vf1_err)
 
         vf2_val = self.voidfrac_down.loc[self.u_mf]
-        vf2_std = self.voidfrac_down_std.loc[self.u_mf]
-        voidfrac2 = uncertainties.ufloat(vf2_val, vf2_std)
+        vf2_err = self.voidfrac_down_err.loc[self.u_mf]
+        voidfrac2 = uncertainties.ufloat(vf2_val, vf2_err)
 
         bond_no = (voidfrac2 / voidfrac1) ** 3 * (1 - voidfrac1) / (1 - voidfrac2) - 1
 
@@ -364,22 +364,22 @@ class ModelAnalysis(FlBedPlot):
         """
         idx_max = self.pressure_up.idxmax()
         p_1 = uncertainties.ufloat(
-            self.pressure_up.max(), self.pressure_up_std.loc[idx_max]
+            self.pressure_up.max(), self.pressure_up_err.loc[idx_max]
         )
 
         p_ss = uncertainties.ufloat(
-            self.pressure_up.iloc[-1], self.pressure_up_std.iloc[-1]
+            self.pressure_up.iloc[-1], self.pressure_up_err.iloc[-1]
         )
 
         p_2 = uncertainties.ufloat(
-            self.pressure_down.loc[self.u_mf], self.pressure_down_std.loc[self.u_mf]
+            self.pressure_down.loc[self.u_mf], self.pressure_down_err.loc[self.u_mf]
         )
 
         k_up = uncertainties.ufloat(
-            self.contactn_up.loc[self.u_mf], self.contactn_up_std.loc[self.u_mf]
+            self.contactn_up.loc[self.u_mf], self.contactn_up_err.loc[self.u_mf]
         )
         k_down = uncertainties.ufloat(
-            self.contactn_down.loc[self.u_mf], self.contactn_down_std.loc[self.u_mf]
+            self.contactn_down.loc[self.u_mf], self.contactn_down_err.loc[self.u_mf]
         )
         delta_k = abs(k_up - k_down)
 

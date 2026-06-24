@@ -359,7 +359,7 @@ class FlBedPlot:
             self._calc_vel(df=pressure_df)
 
             vel_plot_df = pressure_df.groupby(["direction", "V_z"]).mean()
-            vel_plot_std = pressure_df.groupby(["direction", "V_z"]).std()
+            vel_plot_err = pressure_df.groupby(["direction", "V_z"]).sem()
 
             # Sort the data for plotting
             vel_up = (
@@ -372,9 +372,9 @@ class FlBedPlot:
                 .sort_index()
             )
 
-            vel_up_std = (
-                vel_plot_std[
-                    vel_plot_std.index.get_level_values(level="direction").isin(
+            vel_up_err = (
+                vel_plot_err[
+                    vel_plot_err.index.get_level_values(level="direction").isin(
                         ["up", "max"]
                     )
                 ]
@@ -392,9 +392,9 @@ class FlBedPlot:
                 .sort_index()
             )
 
-            vel_down_std = (
-                vel_plot_std[
-                    vel_plot_std.index.get_level_values(level="direction").isin(
+            vel_down_err = (
+                vel_plot_err[
+                    vel_plot_err.index.get_level_values(level="direction").isin(
                         ["down", "max"]
                     )
                 ]
@@ -407,7 +407,7 @@ class FlBedPlot:
                     plt.errorbar(
                         vel_up.index,
                         vel_up[pressure_df.columns[i]],
-                        yerr=vel_up_std[pressure_df.columns[i]],
+                        yerr=vel_up_err[pressure_df.columns[i]],
                         label=f"Probe {i} (Up)",
                         color=f"C{i}",
                         marker="o",
@@ -415,7 +415,7 @@ class FlBedPlot:
                     plt.errorbar(
                         vel_down.index,
                         vel_down[pressure_df.columns[i]],
-                        yerr=vel_down_std[pressure_df.columns[i]],
+                        yerr=vel_down_err[pressure_df.columns[i]],
                         label=f"Probe {i} (Down)",
                         color=f"C{i}",
                         marker="o",
@@ -425,9 +425,9 @@ class FlBedPlot:
                     probe0_up_v = vel_up.index.to_numpy()
                     probe0_up_p = vel_up[pressure_df.columns[0]].to_numpy()
                     probe0_down_v = vel_down.index.to_numpy()
-                    probe0_up_p_err = vel_up_std[pressure_df.columns[0]].to_numpy()
+                    probe0_up_p_err = vel_up_err[pressure_df.columns[0]].to_numpy()
                     probe0_down_p = vel_down[pressure_df.columns[0]].to_numpy()
-                    probe0_down_p_err = vel_down_std[pressure_df.columns[0]].to_numpy()
+                    probe0_down_p_err = vel_down_err[pressure_df.columns[0]].to_numpy()
                     probe0_2d = np.vstack(
                         (
                             probe0_up_v,
@@ -447,7 +447,7 @@ class FlBedPlot:
                 plt.errorbar(
                     vel_up.index,
                     vel_up["pressure"],
-                    yerr=vel_up_std["pressure"],
+                    yerr=vel_up_err["pressure"],
                     label=r"$V_z$ Increasing",
                     color="C0",
                     marker="o",
@@ -455,7 +455,7 @@ class FlBedPlot:
                 plt.errorbar(
                     vel_down.index,
                     vel_down["pressure"],
-                    yerr=vel_down_std["pressure"],
+                    yerr=vel_down_err["pressure"],
                     label=r"$V_z$ Increasing",
                     color="C0",
                     marker="o",
@@ -556,7 +556,7 @@ class FlBedPlot:
             self._calc_vel(df=voidfrac_df)
 
             vel_plot_df = voidfrac_df.groupby(["direction", "V_z"]).mean()
-            vel_plot_std = voidfrac_df.groupby(["direction", "V_z"]).std()
+            vel_plot_err = voidfrac_df.groupby(["direction", "V_z"]).sem()
 
             # Sort the data for plotting
             vel_up = (
@@ -569,9 +569,9 @@ class FlBedPlot:
                 .sort_index()
             )
             # print("Vel up", vel_up)
-            vel_up_std = (
-                vel_plot_std[
-                    vel_plot_std.index.get_level_values(level="direction").isin(
+            vel_up_err = (
+                vel_plot_err[
+                    vel_plot_err.index.get_level_values(level="direction").isin(
                         ["up", "max"]
                     )
                 ]
@@ -589,9 +589,9 @@ class FlBedPlot:
                 .sort_index()
             )
 
-            vel_down_std = (
-                vel_plot_std[
-                    vel_plot_std.index.get_level_values(level="direction").isin(
+            vel_down_err = (
+                vel_plot_err[
+                    vel_plot_err.index.get_level_values(level="direction").isin(
                         ["down", "max"]
                     )
                 ]
@@ -604,7 +604,7 @@ class FlBedPlot:
                     plt.errorbar(
                         vel_up.index,
                         vel_up[voidfrac_df.columns[i]],
-                        yerr=vel_up_std[voidfrac_df.columns[i]],
+                        yerr=vel_up_err[voidfrac_df.columns[i]],
                         label=f"Probe {i} (Up)",
                         color=f"C{i}",
                         marker="o",
@@ -612,7 +612,7 @@ class FlBedPlot:
                     plt.errorbar(
                         vel_down.index,
                         vel_down[voidfrac_df.columns[i]],
-                        yerr=vel_down_std[voidfrac_df.columns[i]],
+                        yerr=vel_down_err[voidfrac_df.columns[i]],
                         label=f"Probe {i} (Down)",
                         color=f"C{i}",
                         marker="o",
@@ -622,7 +622,7 @@ class FlBedPlot:
                 plt.errorbar(
                     vel_up.index,
                     vel_up["void_frac"],
-                    yerr=vel_up_std["void_frac"],
+                    yerr=vel_up_err["void_frac"],
                     label=r"$V_z$ Increasing",
                     color="C0",
                     marker="o",
@@ -630,7 +630,7 @@ class FlBedPlot:
                 plt.errorbar(
                     vel_down.index,
                     vel_down["void_frac"],
-                    yerr=vel_down_std["void_frac"],
+                    yerr=vel_down_err["void_frac"],
                     label=r"$V_z$ Decreasing",
                     color="C0",
                     marker="o",
@@ -639,10 +639,10 @@ class FlBedPlot:
                 if dump_probe0:
                     probe0_up_v = vel_up.index.to_numpy()
                     probe0_up_p = vel_up["void_frac"].to_numpy()
-                    probe0_up_p_err = vel_up_std["void_frac"].to_numpy()
+                    probe0_up_p_err = vel_up_err["void_frac"].to_numpy()
                     probe0_down_v = vel_down.index.to_numpy()
                     probe0_down_p = vel_down["void_frac"].to_numpy()
-                    probe0_down_p_err = vel_down_std["void_frac"].to_numpy()
+                    probe0_down_p_err = vel_down_err["void_frac"].to_numpy()
                     probe0_2d = np.vstack(
                         (
                             probe0_up_v,
