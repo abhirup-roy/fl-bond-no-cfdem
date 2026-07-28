@@ -81,6 +81,7 @@ class FlBedPlot:
         velcfg_path: str,
         dump2csv: bool = True,
         plots_dir: str = "plots/",
+        rho_f: float = 1.28,
     ):
         """
         Initialise the FlBedPlot class for plotting pressure and void fraction data from fluidised bed simulations
@@ -96,6 +97,9 @@ class FlBedPlot:
             Save the probe data to a csv file
           plots_dir:
             Directory to save the plots
+          rho_f:
+            Fluid density in kg/m^3, used to convert the kinematic pressure written by
+            OpenFOAM (p/rho, m^2/s^2) into Pa. Must match `CFD/0/rho`.
 
         Raises:
           FileNotFoundError: If the pressure_path, velcfg_path or plots_dir does not exist
@@ -114,6 +118,7 @@ class FlBedPlot:
         self.dump2csv = dump2csv
         self.velcfg_path = velcfg_path
         self.plots_dir = plots_dir
+        self.rho_f = rho_f
         self.data_cache = dict()
 
         rcParams.update({"font.size": 20})
@@ -183,7 +188,7 @@ class FlBedPlot:
             Aggregation method for y-normal slices. "cdf_median" for median of CDF, "mean" for mean, "median" for median.
 
         Returns:
-          A pandas DataFrame with the pressure data indexed by time.
+          A pandas DataFrame with the pressure data (in Pa) indexed by time.
 
         Raises:
             ValueError: If use_slices is True and slice_dirn is not "z" or "y".
@@ -205,9 +210,6 @@ class FlBedPlot:
                 nprocs=nprocs,
             )
 
-            if slice_dirn == "y" and self.dump2csv:
-                pressure_df.to_csv("probe_pressure.csv")
-
         else:
             # Make df from the probe data
             headers = ["Probe Time"]
@@ -221,6 +223,10 @@ class FlBedPlot:
                 names=headers,
                 header=None,
             ).set_index("Probe Time")
+
+        # ponytail: incompressible OpenFOAM writes p as kinematic pressure (p/rho,
+        # m^2/s^2), so scale by the fluid density to get Pa.
+        pressure_df *= self.rho_f
 
         # Dump to csv if specified
         if self.dump2csv:

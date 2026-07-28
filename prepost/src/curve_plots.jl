@@ -40,6 +40,8 @@ A mutable struct representing a fluidised bed simulation configuration and resul
 - `_df_store::Union{Array, Nothing}`: Storage for dataframes.
 - `p_diameter::Union{Real, Nothing}`: Particle diameter.
 - `𝜌_p::Union{Real, Nothing}`: Particle density.
+- `𝜌_f::Real`: Fluid density in kg/m^3, used to convert the kinematic pressure written by
+  OpenFOAM (p/rho, m^2/s^2) into Pa. Must match `CFD/0/rho`.
 - `poisson_ratio::Union{Real, Nothing}`: Poisson ratio for particles.
 - `youngs_modulus::Union{Real, Nothing}`: Young's modulus for particles.
 - `ced::Union{Real, Nothing}`: Coefficient of elastic damping.
@@ -60,6 +62,7 @@ A mutable struct representing a fluidised bed simulation configuration and resul
     _df_store::Union{Array, Nothing} = nothing
     p_diameter::Union{Real, Nothing} = nothing
     𝜌_p::Union{Real, Nothing} = nothing
+    𝜌_f::Real = 1.28
     poisson_ratio::Union{Real, Nothing} = nothing
     youngs_modulus::Union{Real, Nothing} = nothing
     ced::Union{Real, Nothing} = nothing
@@ -240,7 +243,7 @@ Converts pressure probe data from a fluidized bed simulation to a DataFrame.
 - `y_agg`: Aggregation method for y-normal slices. Options: "cdf_median", "mean", "median".
 
 # Returns
-- `DataFrame`: Contains time series pressure data for each probe.
+- `DataFrame`: Contains time series pressure data (in Pa) for each probe.
 
 # Behavior
 - For z-normal slices: Reads VTK files for each probe at each time step and computes mean pressure.
@@ -332,6 +335,12 @@ function _probe2df(flbed::FluidisedBed, use_slices::Bool, slice_dirn::Char, y_ag
     end
 
     sort!(pressure_df, :time)
+
+    # ponytail: incompressible OpenFOAM writes p as kinematic pressure (p/rho,
+    # m^2/s^2), so scale by the fluid density to get Pa.
+    for col in names(pressure_df, Not(:time))
+        pressure_df[!, col] .*= flbed.𝜌_f
+    end
 
     if flbed.dump2csv
         CSV.write(joinpath(flbed.plots_dir, "pressure.csv"), pressure_df)

@@ -28,6 +28,7 @@ class ModelAnalysis(FlBedPlot):
         velcfg_path: str = "prepost/velcfg.txt",
         dump2csv: bool = False,
         plots_dir: str = "plots/",
+        rho_f: float = 1.28,
     ):
         """
         Initialise object to calculate the bond number using different models
@@ -43,6 +44,9 @@ class ModelAnalysis(FlBedPlot):
             Whether or not to save the probe data to a csv file
           plots_dir:
             Directory to save the plots
+          rho_f:
+            Fluid density in kg/m^3, used to convert the kinematic pressure written by
+            OpenFOAM (p/rho, m^2/s^2) into Pa. Must match `CFD/0/rho`.
         """
 
         super().__init__(
@@ -51,6 +55,7 @@ class ModelAnalysis(FlBedPlot):
             velcfg_path=velcfg_path,
             dump2csv=dump2csv,
             plots_dir=plots_dir,
+            rho_f=rho_f,
         )
 
         self._store_data()
